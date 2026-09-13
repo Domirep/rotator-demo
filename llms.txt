@@ -22,7 +22,7 @@ this file is stale. Report it rather than repeating it.
 | Payout token (MET) | `METvsvVRapdj9cFLzq4Tr43xK4tAjQfwX76z3n6mWQL` |
 | Vault program | `__VAULT_PROGRAM__` |
 | Team wallet (5%) | `BctPqouosqBE9LdN2ha6kvMmagHTrscVGoJvWW7XqYfN` |
-| Website | `https://rotator-demo.pages.dev` |
+| Website | `https://galaxymet.pages.dev` |
 | X / Twitter | `https://x.com/galaxymet` |
 | Meteora DBC | `dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN` |
 | Meteora DAMM v2 | `cpamdpZCGKUy5JxQXB4dcpGPiikHawvSWAd6mEn1sGG` |

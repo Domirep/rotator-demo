@@ -1,6 +1,6 @@
 # ROTATOR
 
-**Live: https://rotator-demo.pages.dev**
+**Live: https://galaxymet.pages.dev**
 
 A 3-minute game on Solana. Eight real memecoins race. Every eligible holder of
 $GALAXY is assigned to one. The coin with the highest time-weighted average move
