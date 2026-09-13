@@ -1,0 +1,9 @@
+# working copies — index.html is the published artifact
+bay.html
+horses-backup.html
+parts/
+
+node_modules/
+.env
+*.log
+.DS_Store

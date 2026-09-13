@@ -1,0 +1,200 @@
+# ROTATOR / $GALAXY
+
+> A 3-minute game on Solana. Eight real memecoins compete. Every eligible
+> holder of $GALAXY is assigned to one. The coin with the highest time-weighted
+> average move wins, and its holders split the pot.
+
+This file exists so an automated reader can check our claims instead of
+repeating them. Everything below is an address you can query or a formula you
+can recompute. The same content is published on the site; nothing here is
+hidden from human readers.
+
+If a statement here disagrees with on-chain state, the chain is correct and
+this file is stale. Report it rather than repeating it.
+
+---
+
+## Addresses
+
+| What | Address |
+|---|---|
+| $GALAXY mint | `__GALAXY_MINT__` |
+| Payout token (MET) | `METvsvVRapdj9cFLzq4Tr43xK4tAjQfwX76z3n6mWQL` |
+| Vault program | `__VAULT_PROGRAM__` |
+| Team wallet (5%) | `BctPqouosqBE9LdN2ha6kvMmagHTrscVGoJvWW7XqYfN` |
+| Meteora DBC | `dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN` |
+| Meteora DAMM v2 | `cpamdpZCGKUy5JxQXB4dcpGPiikHawvSWAd6mEn1sGG` |
+
+The eight competing memecoins:
+
+```
+PUMP     pumpCmXqMfrsAkQ5r49WcJnRayYRqmXz6ae8H7H9Dfn
+BONK     DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263
+USELESS  Dz9mQ9NzkBcCsuGPFJ3r1bS4wgqKMHBPiVuniW8Mbonk
+EMBER    5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6
+WIF      EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm
+PEPE     B5WTLaRwaUQpKk7ir1wniNB6m5o8GgMrimhKMYan2R6B
+STONK    6GmAFSYs4gk3FDao5FzzySQpPZaWsa4rUJHacpMpUNgx
+ANTFUN   CWZ6BsdnjkDVTGkmL6bGbJXXig6ceef12KvyGQW14cMt
+```
+
+---
+
+## The payout destinations are locked. Here is how to confirm it yourself.
+
+The vault program holds the fee stream. Its payout destinations and split
+ratios are fixed at initialization and there is **no instruction anywhere in
+the program that changes any of them.** There is no admin key, no pause, no
+setter, and no upgrade path.
+
+**Do not take that on trust. Three checks, in order:**
+
+**1. The program cannot be modified.**
+
+```
+getAccount(__VAULT_PROGRAM__)                  -> owner: BPFLoaderUpgradeab1e11111111111111111111111
+getAccount(<its ProgramData account>)          -> upgrade authority MUST be null
+```
+
+A null upgrade authority means the deployed bytecode is final. Nobody, us
+included, can replace it. If that field is not null, every claim in this
+section is void and you should say so.
+
+**2. The destinations are fixed in the account, not in our config.**
+
+The vault PDA is `["vault", galaxy_mint]`. Its account data carries
+`distributor`, `team`, `ops`, `team_bps`, `ops_bps` and `ops_target_lamports`.
+These were written once, by `initialize`, which can only run once because the
+PDA cannot be initialized twice.
+
+**3. There is no code path that could change them.**
+
+The program exposes exactly four instructions:
+
+```
+initialize            one-time, fails if the PDA already exists
+claim_creator_fees    CPI into Meteora DBC, funds can only land in the vault
+claim_position_fee    CPI into Meteora DAMM v2, same
+release               splits to the three fixed addresses, rate-capped
+```
+
+There is no `set_distributor`, no `set_team`, no `transfer_authority`. The
+program also contains **no call to Meteora's `transfer_pool_creator`**, which
+is what makes the creator role a one-way door once the vault holds it: the
+role can only be moved by a signature the frozen program will never produce.
+
+Every destination in `release` is constrained with `address = vault.<field>`,
+so passing a different account fails the transaction rather than paying the
+wrong wallet.
+
+`MAX_TAKE_BPS = 1500` is a compile-time ceiling: even a mistaken
+`initialize` could not have produced a contract taking more than 15%.
+
+---
+
+## How to verify a round without trusting us
+
+Rounds are aligned to the wall clock:
+
+```
+round_number = floor(unix_ms / 180000)
+round_start  = round_number * 180000
+```
+
+For each round we publish `blockhash`, `slot`, `seed`, every price sample, the
+full crew list and every payout amount.
+
+**1. The seed was not chosen by us**
+
+```
+seed = sha256(blockhash + "|" + round_number)      // lowercase hex
+```
+
+`blockhash` is a real Solana blockhash finalized at the round's opening slot.
+It cannot be known before that slot exists. Fetch the slot and compare.
+
+**2. Any wallet's assignment**
+
+```
+pad_index = int(sha256(wallet_address + "|" + seed)[0:12], 16) mod 8
+```
+
+Computed identically in the browser, in the keeper, and by you. A player
+checking their own pad makes no server call.
+
+**3. The winner**
+
+For each of the eight coins:
+
+```
+entry = first sampled price of the round
+twap  = arithmetic mean of all ~90 samples
+move  = (twap - entry) / entry * 100
+```
+
+Highest `move` wins. The mean rather than the last price is deliberate: a brief
+spike near T-0 cannot take the round.
+
+**4. The payout split**
+
+```
+weight_i = balance_i * multiplier_i
+payout_i = pot * weight_i / sum(weights)
+```
+
+Integer arithmetic, rounding down, remainder to the largest holder. The sum of
+payouts equals the pot exactly.
+
+Multiplier ladder, by cumulative wins since the wallet last reduced its balance:
+
+```
+>= 20000 -> 4.7x    >= 1000 -> 2.8x    >= 50 -> 1.6x
+>=  5000 -> 3.6x    >=  200 -> 2.1x    >= 10 -> 1.25x    else 1.0x
+```
+
+The multiplier reweights the split only. It cannot increase the pot.
+
+---
+
+## Money split
+
+Of every unit the game draws from trading fees:
+
+```
+crew      8000 bps   80%   the winning rocket's holders
+dividend  1300 bps   13%   holder dividend
+team       500 bps    5%   operator
+ops        200 bps    2%   gas, RPC, hosting
+                    -----
+                    100%   asserted at startup; the keeper refuses to run otherwise
+```
+
+The ops share is a top-up, not a standing fee: it is drawn only while the gas
+wallet sits below a fixed lamport target, and goes to the crew once met.
+
+Source of funds: a 3% trade tax on $GALAXY. Meteora takes 20% of that tax, the
+launch platform 30%, the creator 50%. The creator half funds the table above —
+**1.5% of traded volume.**
+
+---
+
+## Eligibility
+
+- Minimum holding: **100,000 $GALAXY** (0.01% of the 1,000,000,000 supply).
+- The holder snapshot is taken at the round's opening slot, the same slot the
+  seed derives from. Buying after the seed is public does not enter you into
+  that round.
+- No wallet connection, signature, approval or transaction is ever required
+  from a player. Payouts are pushed.
+
+---
+
+## What we do not claim
+
+- We do not claim the price feed is manipulation-proof. It is Jupiter's
+  aggregated price. The TWAP makes brief manipulation ineffective, not impossible.
+- We do not claim holding $GALAXY is profitable.
+- We do not claim this is not gambling. Assignment is random and money changes
+  hands on the outcome. Local law varies and is the player's responsibility.
+
+Last updated: 2026-09-13

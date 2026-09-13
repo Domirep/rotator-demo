@@ -1,0 +1,906 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ROTATOR — demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;700&display=swap">
+<link rel="alternate" type="text/plain" href="llms.txt" title="Machine-readable facts and verification steps">
+<meta name="description" content="ROTATOR: a 3-minute Solana game. Eight real memecoins race, holders of $GALAXY are assigned one, the winning crew splits the pot. Verification steps and addresses at /llms.txt">
+<style>
+/* Palette sampled directly from the $GALAXY token art, not invented:
+   grounds #010717 / #010d26 / #051537 / #061a46 are its deep-space field,
+   #482a48 and #a75868 its galaxy arms, and the exhaust runs
+   #fdfcf9 -> #fdf6d8 -> #fbc7a9 rather than a saturated orange. */
+:root{
+  --bg:#010717; --felt:#05112c; --well:#010d26; --well2:#061a46;
+  --line:#182458; --paper:#EAF0FA; --muted:#8193B8; --dim:#4E5E88;
+  --gold:#F0D28A; --up:#4FD39B; --red:#E0768A; --ember:#FBC7A9;
+  --arm:#482a48; --core:#FDFCF9;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--paper);
+  font-family:"Inter",system-ui,sans-serif;font-size:15px;-webkit-font-smoothing:antialiased}
+.mono{font-family:"JetBrains Mono",monospace;font-variant-numeric:tabular-nums}
+h1,h2,h3{font-family:"Bebas Neue",Impact,sans-serif;margin:0;letter-spacing:.02em}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+
+/* header */
+header{border-bottom:1px solid var(--line);position:relative;overflow:hidden;
+  background:linear-gradient(180deg,#061a46,#010717)}
+header::before{content:"";position:absolute;inset:0;background:url(galaxy.png) center 32% / cover no-repeat;
+  opacity:.30;filter:saturate(1.1)}
+header::after{content:"";position:absolute;inset:0;
+  background:linear-gradient(180deg,rgba(1,7,23,.45),rgba(1,7,23,.92))}
+.hd{position:relative;z-index:1}
+.hd{max-width:1180px;margin:0 auto;padding:16px 20px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.hd h1{font-size:40px;line-height:1;color:var(--gold)}
+.hd .tag{font-size:12px;color:var(--muted);border-left:1px solid var(--line);padding-left:16px;line-height:1.4}
+.hd .tag b{color:var(--paper);font-weight:600}
+.vault{margin-left:auto;display:flex;gap:22px;text-align:right}
+.vault div span{display:block;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+.vault div b{font-family:"JetBrains Mono",monospace;font-size:18px;font-weight:700}
+.v-gold{color:var(--gold)} .v-up{color:var(--up)}
+
+/* count bar */
+.racebar{display:flex;align-items:center;gap:16px;padding:14px 0 10px;flex-wrap:wrap}
+.racebar h2{font-size:26px}
+.pill{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  padding:3px 10px;border-radius:999px;border:1px solid currentColor}
+.p-live{color:var(--up)} .p-hot{color:var(--gold)} .p-go{color:var(--ember)} .p-done{color:var(--muted)}
+.clock{font-family:"JetBrains Mono",monospace;font-size:30px;font-weight:700;letter-spacing:-.02em;margin-left:auto}
+.clock.warn{color:var(--ember)}
+.seedline{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--dim);width:100%;
+  border-top:1px dashed var(--line);padding-top:8px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* launch bay */
+.bay{border:1px solid var(--line);border-radius:12px;background:var(--felt);
+  padding:18px 16px 14px;display:grid;grid-template-columns:repeat(8,1fr);gap:10px}
+.pad{display:flex;flex-direction:column;gap:8px;min-width:0}
+.tube{position:relative;height:300px}
+.well{position:absolute;inset:0;overflow:hidden;border:1px solid var(--line);border-radius:9px 9px 5px 5px;
+  background:
+    repeating-linear-gradient(0deg,transparent 0 24px,rgba(234,240,250,.045) 24px 25px),
+    linear-gradient(180deg,var(--well),var(--well2))}
+.fuel{position:absolute;left:0;right:0;bottom:0;height:0;opacity:.9;will-change:height;
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.5)}
+.live{position:absolute;left:0;right:0;bottom:0;height:0;border-top:1px dashed rgba(233,238,246,.5);will-change:bottom}
+.deck{position:absolute;left:0;right:0;bottom:0;height:7px;background:#0A1533;border-top:1px solid #23336B}
+canvas.stage{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;z-index:2;pointer-events:none}
+#sky{position:fixed;inset:0;width:100vw;height:100vh;z-index:60;pointer-events:none;image-rendering:pixelated;display:none}
+#sky.on{display:block}
+.pct{font-family:"JetBrains Mono",monospace;font-size:14px;font-weight:700;text-align:center}
+.who{text-align:center;min-width:0}
+.who b{display:block;font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.who span{display:block;font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--dim);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.badge{font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.1em;text-align:center;height:12px;color:var(--dim)}
+.pad.mine .who b{color:var(--gold)}
+.pad.mine .well{border-color:rgba(240,210,138,.55)}
+.pad.hot .well{border-color:rgba(240,210,138,.45)}
+.pad.win .well{border-color:var(--ember);box-shadow:0 0 30px rgba(251,199,169,.35)}
+.pad.win .who b,.pad.win .badge{color:var(--ember)}
+.pad.scrub{opacity:.42}
+.up{color:var(--up)} .down{color:var(--red)} .flat{color:var(--muted)}
+
+/* panels */
+.cols{display:grid;grid-template-columns:1fr 340px;gap:18px;margin-top:18px}
+.panel{background:var(--felt);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+.panel h3{font-size:19px;color:var(--gold);margin-bottom:10px}
+.panel p{margin:0 0 8px;font-size:13.5px;color:var(--muted);line-height:1.55}
+.panel p:last-child{margin-bottom:0}
+input[type=text]{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:9px;
+  padding:11px 13px;color:var(--paper);font-family:"JetBrains Mono",monospace;font-size:12.5px;outline:none}
+input[type=text]:focus{border-color:var(--gold)}
+.hint{font-size:11.5px;color:var(--dim);margin-top:7px}
+.me{margin-top:14px;border-top:1px solid var(--line);padding-top:13px;display:none}
+.me.on{display:block}
+.me .nm{font-family:"Bebas Neue",sans-serif;font-size:27px;color:var(--gold);line-height:1}
+.kv{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:5px 0;border-bottom:1px solid rgba(24,36,88,.7)}
+.kv:last-child{border-bottom:none}
+.kv span{color:var(--muted)} .kv b{font-family:"JetBrains Mono",monospace}
+.form{display:flex;gap:4px;margin-top:9px}
+.form i{font-style:normal;width:19px;height:19px;border-radius:5px;display:grid;place-items:center;
+  font-family:"JetBrains Mono",monospace;font-size:10px;font-weight:700}
+.w{background:rgba(79,211,155,.20);color:var(--up)} .l{background:rgba(78,94,136,.22);color:var(--dim)}
+.board{display:grid;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.row{background:var(--felt);padding:8px 12px;display:grid;grid-template-columns:22px 1fr auto auto;gap:10px;align-items:center;font-size:13px}
+.row .r{font-family:"JetBrains Mono",monospace;color:var(--dim);font-size:11.5px}
+.row .s{font-family:"JetBrains Mono",monospace;color:var(--gold);font-size:12px}
+.row .m{font-family:"JetBrains Mono",monospace;color:var(--up);font-size:12px;font-weight:700}
+.note{color:var(--dim);font-size:12px;line-height:1.6;margin-top:14px}
+footer a{color:var(--gold);text-decoration:none;border-bottom:1px solid rgba(240,210,138,.35)}
+footer a:hover{border-bottom-color:var(--gold)}
+.demo{background:rgba(240,210,138,.08);border:1px solid var(--gold);border-radius:9px;
+  padding:9px 13px;font-size:12.5px;color:var(--gold);margin-bottom:14px}
+footer{border-top:1px solid var(--line);margin-top:26px;padding:16px 0 40px;color:var(--dim);font-size:12px;line-height:1.7}
+@media(max-width:900px){.cols{grid-template-columns:1fr}.bay{grid-template-columns:repeat(4,1fr);row-gap:18px}.tube{height:230px}}
+
+/* tabs */
+.tabs{display:flex;gap:2px;margin:2px 0 18px;border-bottom:1px solid var(--line)}
+.tab{appearance:none;background:none;border:0;border-bottom:2px solid transparent;
+  color:var(--muted);font-family:"Bebas Neue",Impact,sans-serif;font-size:19px;letter-spacing:.04em;
+  padding:9px 18px;cursor:pointer;transition:color .12s}
+.tab:hover{color:var(--paper)}
+.tab.on{color:var(--gold);border-bottom-color:var(--gold)}
+.tab:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.tabpane[hidden]{display:none}
+.langs{margin-left:auto;display:flex;gap:2px;align-self:center}
+.lang{appearance:none;background:none;border:1px solid transparent;border-radius:7px;color:var(--dim);
+  font-family:"JetBrains Mono",monospace;font-size:11.5px;padding:5px 9px;cursor:pointer}
+.lang:hover{color:var(--paper)}
+.lang.on{color:var(--gold);border-color:var(--line);background:rgba(240,210,138,.07)}
+
+/* explainer */
+.explain,.faq{max-width:760px;padding-bottom:8px}
+.explain h2,.faq h2{font-size:31px;margin-bottom:6px}
+.lede{color:var(--muted);font-size:15px;margin:0 0 24px}
+.steps{list-style:none;counter-reset:s;padding:0;margin:0;display:grid;gap:16px}
+.steps li{counter-increment:s;display:grid;grid-template-columns:30px minmax(0,1fr);
+  column-gap:13px;row-gap:2px;align-items:start}
+.steps li::before{content:counter(s);grid-column:1;grid-row:1 / span 2;
+  width:28px;height:28px;border-radius:8px;display:grid;place-items:center;
+  background:rgba(240,210,138,.12);color:var(--gold);font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:700}
+.steps b{grid-column:2;grid-row:1;display:block;font-size:15px;font-weight:600}
+.steps span{grid-column:2;grid-row:2;display:block;color:var(--muted);font-size:13.5px;line-height:1.55;margin-top:3px}
+.steps em{color:var(--paper);font-style:normal}
+.callout{margin-top:26px;border-left:3px solid var(--gold);background:rgba(240,210,138,.06);
+  padding:14px 16px;border-radius:0 9px 9px 0;font-size:13.5px;color:var(--muted);line-height:1.6}
+.callout b{color:var(--paper)}
+
+/* faq */
+details{border:1px solid var(--line);border-radius:10px;background:var(--felt);margin-bottom:8px}
+summary{cursor:pointer;padding:13px 16px;font-weight:600;font-size:14.5px;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"+";color:var(--gold);font-family:"JetBrains Mono",monospace;margin-right:11px}
+details[open] summary::before{content:"-"}
+details[open] summary{border-bottom:1px solid var(--line)}
+details p{margin:0;padding:12px 16px 0;color:var(--muted);font-size:13.5px;line-height:1.62}
+details p:last-of-type{padding-bottom:15px}
+details b{color:var(--paper)}
+details em{color:var(--paper);font-style:normal}
+details code{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--paper);
+  background:var(--bg);padding:1px 5px;border-radius:4px}
+.ladder{margin:10px 16px 15px;border-collapse:collapse;font-size:13px}
+.ladder th{text-align:left;color:var(--dim);font-weight:600;font-size:10.5px;letter-spacing:.1em;
+  text-transform:uppercase;padding:4px 22px 6px 0}
+.ladder td{padding:3px 22px 3px 0;font-family:"JetBrains Mono",monospace;color:var(--muted)}
+.ladder td:nth-child(2){color:var(--gold);font-weight:700}
+</style>
+</head>
+<body>
+
+<header><div class="hd">
+  <h1>ROTATOR</h1>
+  <div class="tag">Eight real memecoins. Three minutes.<br>You're <b>assigned</b> a pad. Hold to ride.</div>
+  <div class="vault">
+    <div><span>Vault</span><b class="v-gold" id="vault">$412</b></div>
+    <div><span>This pot</span><b class="v-up" id="pot">$33</b></div>
+    <div><span>Cadence</span><b id="cad">3m</b></div>
+  </div>
+</div></header>
+
+<div class="wrap">
+
+  <div class="demo">DEMO — live Jupiter prices on real coins. No contracts, no token, nothing signed. Wallets and payouts are simulated.</div>
+
+  <nav class="tabs" role="tablist">
+    <button class="tab on" data-tab="race" role="tab" aria-selected="true">The Race</button>
+    <button class="tab" data-tab="how" role="tab" aria-selected="false">How it works</button>
+    <button class="tab" data-tab="faq" role="tab" aria-selected="false">FAQ</button>
+    <span class="langs" id="langs"></span>
+  </nav>
+
+  <section id="tab-race" class="tabpane">
+
+  <div class="racebar">
+    <h2 id="rno">LAUNCH #1041</h2>
+    <span class="pill p-live" id="state">FUELING</span>
+    <div class="clock" id="clock">T-03:00</div>
+    <div class="seedline" id="seed">seed sha256(blockhash &#8214; round) = &#8230;</div>
+  </div>
+
+  <div class="bay" id="bay"></div>
+  <canvas id="sky"></canvas>
+
+  <div class="cols">
+    <div>
+      <div class="panel">
+        <h3>Galaxy board</h3>
+        <div class="board" id="board"></div>
+        <div class="note">Every win is a galaxy reached. The count climbs for as long as you hold &mdash; selling banks the winnings and sends you back to zero.</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel">
+        <h3>Am I on a pad?</h3>
+        <input type="text" id="addr" placeholder="paste any Solana address" spellcheck="false">
+        <div class="hint">Read-only. No wallet connection, nothing to approve.</div>
+        <div class="me" id="me">
+          <div class="nm" id="menm">&#8212;</div>
+          <div class="kv"><span>Your pad</span><b id="mepad">&#8212;</b></div>
+          <div class="kv"><span>Seats</span><b id="meseats">&#8212;</b></div>
+          <div class="kv"><span>Galaxies</span><b id="megalaxies">&#8212;</b></div>
+          <div class="kv"><span>Multiplier</span><b id="memult">&#8212;</b></div>
+          <div class="form" id="meform"></div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:18px">
+        <h3>How the fuel fills</h3>
+        <p><b style="color:var(--paper)">Fuel</b> &mdash; the time-weighted average of the coin's move since the gate. 90 samples a launch. One green candle can't fill a tank.</p>
+        <p><b style="color:var(--paper)">Dashed line</b> &mdash; the price this second. Above the fuel it's pouring in, below it's draining.</p>
+        <p><b style="color:var(--paper)">T-0</b> &mdash; fullest tank lifts off. Everyone else is scrubbed.</p>
+        <p id="feed" class="mono" style="font-size:11.5px;color:var(--dim)">feed: connecting&#8230;</p>
+      </div>
+    </div>
+  </div>
+
+  </section>
+
+  <section id="tab-how" class="tabpane" hidden><div class="explain" id="howBody"></div></section>
+
+  <section id="tab-faq" class="tabpane" hidden><div class="faq" id="faqBody"></div></section>
+
+  <footer>
+    Demo only. Prices are live from Jupiter for eight real Solana memecoins; the launch, wallets, vault, pots and payouts are simulated.
+    No contracts deployed, no token exists, nothing is signed.
+  </footer>
+</div>
+
+<script src="i18n.js"></script>
+<script>
+/* ---------- the eight real coins ---------- */
+const FIELD=[
+ {sym:'PUMP',    name:'Pump.fun',  mint:'pumpCmXqMfrsAkQ5r49WcJnRayYRqmXz6ae8H7H9Dfn', c:'#6FD08C'},
+ {sym:'BONK',    name:'Bonk',      mint:'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263', c:'#E8B54A'},
+ {sym:'USELESS', name:'Useless',   mint:'Dz9mQ9NzkBcCsuGPFJ3r1bS4wgqKMHBPiVuniW8Mbonk', c:'#C98CE0'},
+ {sym:'EMBER',   name:'embercurve',mint:'5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6', c:'#FF7A3D'},
+ {sym:'WIF',     name:'dogwifhat', mint:'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm', c:'#7FB4E8'},
+ {sym:'PEPE',    name:'Pepe',      mint:'B5WTLaRwaUQpKk7ir1wniNB6m5o8GgMrimhKMYan2R6B', c:'#8FD04F'},
+ {sym:'STONK',   name:'STONK',     mint:'6GmAFSYs4gk3FDao5FzzySQpPZaWsa4rUJHacpMpUNgx', c:'#E0C15E'},
+ {sym:'ANTFUN',  name:'AntFun',    mint:'CWZ6BsdnjkDVTGkmL6bGbJXXig6ceef12KvyGQW14cMt', c:'#E06B8B'},
+];
+const RACE_MS=180000, POLL_MS=2000, LAUNCH_MS=4200;
+const REDUCED=matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+/* demo-only: ?at=172 starts the first round already 172s in, so a still can be
+   captured near T-0 without waiting out the clock. Not a player-facing control. */
+let warp=Math.max(0,Math.min(RACE_MS/1000,+(new URLSearchParams(location.search).get('at')||0)));
+
+/* ---------- deterministic helpers (same shape as the real spec) ---------- */
+async function sha(s){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));
+  return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');}
+const hnum=h=>parseInt(h.slice(0,12),16);
+/* independent hex windows - never bit-shift a >32-bit value, it wraps negative */
+const hslice=(h,i)=>parseInt(h.slice(i*6,i*6+6),16);
+const ADJ=['Crimson','Midnight','Gilded','Brass','Feral','Velvet','Iron','Pale','Rowdy','Amber','Hollow','Swift'];
+const ANI=['Otter','Falcon','Mule','Adder','Heron','Jackal','Marten','Bison','Wren','Lynx','Shrike','Boar'];
+async function persona(addr){const h=await sha(addr);
+  return {name:ADJ[hslice(h,0)%ADJ.length]+' '+ANI[hslice(h,1)%ANI.length]+' #'+(hslice(h,2)%9000+1000), h};}
+
+/* ---------- pixel art ----------
+   Same idiom as the Three Laws sprite sheet: an ASCII cell map plus a palette,
+   painted 1px per cell into a cached offscreen canvas, then blitted up with
+   smoothing off. One map, eight palettes - each coin flies its own colours. */
+const RK=[
+ ".......kk.......",
+ "......kHHk......",
+ "......kHHk......",
+ ".....kHHHHk.....",
+ ".....kHHHHk.....",
+ ".....kHhhHk.....",
+ ".....kHhhHk.....",
+ ".....kHwwHk.....",
+ ".....kHWwHk.....",
+ ".....kHhhHk.....",
+ ".....kHhhHk.....",
+ ".....kHddHk.....",
+ ".....kHhhHk.....",
+ "....kfHhhHfk....",
+ "...kffHhhHffk...",
+ "..kfffHhhHfffk..",
+ "..kfffHhhHfffk..",
+ "..kdffHhhHffdk..",
+ "..kkkkHhhHkkkk..",
+ ".....kHhhHk.....",
+ ".....keeeek.....",
+ ".....keeeek.....",
+ "......kkkk......"];
+const RW=16, RH=RK.length, PX=3;                 /* sprite renders 48 x 69 */
+
+function hx(c){c=c.replace('#','');return [parseInt(c.slice(0,2),16),parseInt(c.slice(2,4),16),parseInt(c.slice(4,6),16)];}
+function mix(a,b,t){const x=hx(a),y=hx(b);return 'rgb('+x.map((v,i)=>Math.round(v+(y[i]-v)*t)).join(',')+')';}
+const lite=(c,t)=>mix(c,'#FFFFFF',t), dark=(c,t)=>mix(c,'#000000',t);
+
+function palette(c){return{
+  k:'#080C12', H:lite(c,.42), h:c, d:dark(c,.34),
+  f:mix(c,'#3B4859',.78), e:mix(c,'#66748C',.72),
+  w:'#0D1826', W:'#A9DCFF'};}
+
+const SPR=[];
+function buildSprites(){
+  FIELD.forEach(f=>{
+    const cv=document.createElement('canvas'); cv.width=RW; cv.height=RH;
+    const g=cv.getContext('2d'); g.imageSmoothingEnabled=false;
+    const pal=palette(f.c);
+    for(let y=0;y<RH;y++) for(let x=0;x<RW;x++){
+      const ch=RK[y][x]; if(ch==='.') continue;
+      const col=pal[ch]; if(!col) continue;
+      g.fillStyle=col; g.fillRect(x,y,1,1);
+    }
+    SPR.push(cv);
+  });
+}
+
+/* ---------- state ---------- */
+let round=1041, seedHex='', tStart=Date.now(), entry={}, cur={}, twap={}, samples={}, settled=false;
+let vault=412, pot=33, launchAt=0, winner=-1;
+
+async function newRound(){
+  if(srvOk) return;
+  round++; settled=false; entry={}; twap={}; samples={}; launchAt=0; winner=-1; simP={}; simV={};
+  tStart=Date.now()-warp*1000; warp=0;
+  const fakeBlockhash=Math.random().toString(36).slice(2)+Date.now();
+  seedHex=await sha(fakeBlockhash+'‖'+round);
+  document.getElementById('seed').textContent='seed sha256(blockhash ‖ '+round+') = '+seedHex.slice(0,48)+'…';
+  document.getElementById('rno').textContent='LAUNCH #'+round;
+  pot=Math.max(8,Math.round(vault*0.08));
+  document.getElementById('pot').textContent='$'+pot;
+  document.getElementById('vault').textContent='$'+Math.round(vault);
+  P.forEach(p=>{p.pad.classList.remove('win','scrub','hot'); p.badge.textContent=''; p.smoke.length=0;});
+  endLaunch();
+  shownF=FIELD.map(()=>0); shownL=FIELD.map(()=>0); shownP=FIELD.map(()=>0);
+  await poll(true);
+  setTargets(); refreshMe();
+}
+
+/* ---------- live prices ----------
+   Default path is the real Jupiter feed. ?sim=1 swaps in a seeded random walk
+   so the whole three minutes can be exercised offline while reviewing the art;
+   it is a review switch, never the default, and the feed line says so. */
+const SIM=new URLSearchParams(location.search).has('sim');
+let simP={}, simV={};
+function simPrices(){
+  const out={};
+  for(const f of FIELD){
+    if(simP[f.mint]===undefined){ simP[f.mint]=1; simV[f.mint]=(Math.random()-0.5)*0.0018; }
+    simV[f.mint]=simV[f.mint]*0.93+(Math.random()-0.5)*0.0014;
+    simP[f.mint]*=1+simV[f.mint];
+    out[f.mint]={usdPrice:simP[f.mint]};
+  }
+  return out;
+}
+
+async function poll(isEntry){
+  if(srvOk) return;
+  try{
+    const ids=FIELD.map(f=>f.mint).join(',');
+    const t0=performance.now();
+    const j = SIM ? simPrices() : await (await fetch('https://lite-api.jup.ag/price/v3?ids='+ids)).json();
+    const ms=Math.round(performance.now()-t0);
+    let got=0;
+    for(const f of FIELD){
+      const p=j[f.mint]&&Number(j[f.mint].usdPrice);
+      if(!p) continue; got++;
+      cur[f.mint]=p;
+      if(isEntry||entry[f.mint]===undefined) entry[f.mint]=p;
+      (samples[f.mint]=samples[f.mint]||[]).push(p);
+      const s=samples[f.mint]; twap[f.mint]=s.reduce((a,b)=>a+b,0)/s.length;
+    }
+    document.getElementById('feed').textContent='feed: '+(SIM?'SIMULATED (review mode)':'Jupiter')+' · '+got+'/8 priced · '+ms+'ms · '+
+      (samples[FIELD[0].mint]||[]).length+' samples this launch';
+    if(!isEntry&&!settled) setTargets();
+  }catch(e){ document.getElementById('feed').textContent='feed: error — '+e.message; }
+}
+
+/* ---------- keeper ----------
+   With ?api=<url> (or a saved one) the page becomes a VIEW of the keeper:
+   rounds, seeds, clock and TWAPs all come from the server. Without it, or if
+   the server goes away, it falls back to the local simulation so the page is
+   never blank. The pad formula is identical on both sides, so a player's own
+   check agrees with the keeper by construction. */
+const API=(new URLSearchParams(location.search).get('api')
+  ||localStorage.getItem('rot.api')||'').replace(/\/$/,'');
+if(API){ try{ localStorage.setItem('rot.api',API); }catch(e){} }
+let srv=null, srvOk=false, srvPct=null, srvLive=null, raceMs=RACE_MS, srvFails=0;
+
+function setFeedBadge(){
+  const bar=document.querySelector('.demo'); if(!bar||!API) return;
+  bar.textContent = srvOk
+    ? 'LIVE — rounds, seeds and results come from the keeper. '+(srv&&srv.live?'Payouts are real.':'Payouts are simulated.')
+    : 'Keeper unreachable — showing a local simulation.';
+  bar.style.borderColor = srvOk ? 'var(--up)' : 'var(--red)';
+  bar.style.color = srvOk ? 'var(--up)' : 'var(--red)';
+}
+
+function resetRoundVisuals(){
+  settled=false; launchAt=0; winner=-1;
+  P.forEach(p=>{p.pad.classList.remove('win','scrub','hot'); p.badge.textContent=''; p.smoke.length=0;});
+  endLaunch();
+  shownF=FIELD.map(()=>0); shownL=FIELD.map(()=>0); shownP=FIELD.map(()=>0);
+}
+
+function applyServer(j){
+  srv=j;
+  const bySym={}; for(const f of j.field||[]) bySym[f.sym]=f;
+  srvPct = FIELD.map(f=> bySym[f.sym] ? (Number(bySym[f.sym].twapPct)||0) : 0);
+  srvLive = FIELD.map(f=>{
+    const e=bySym[f.sym];
+    if(!e||!e.entryPrice||!e.livePrice) return 0;
+    return ((e.livePrice-e.entryPrice)/e.entryPrice)*100;
+  });
+  raceMs = j.roundMs || RACE_MS;
+  tStart = j.startedAt;
+
+  if(j.round!==round){
+    round=j.round; seedHex=j.seed||'';
+    resetRoundVisuals();
+    document.getElementById('rno').textContent='LAUNCH #'+round;
+    document.getElementById('seed').textContent=
+      'seed sha256(blockhash ‖ '+round+') = '+(seedHex||'').slice(0,48)+'…';
+    refreshMe();
+  }
+  if(j.settled && !settled){
+    settled=true; setTargets();
+    const w=FIELD.findIndex(f=>f.sym===j.winner);
+    if(w>=0){ winner=w; launchAt=Date.now(); beginLaunch(); }
+    const st=document.getElementById('state');
+    st.textContent='LIFTOFF'; st.className='pill p-go';
+  }
+  setTargets();
+}
+
+async function pollServer(){
+  if(!API) return false;
+  try{
+    const r=await fetch(API+'/api/round/current',{cache:'no-store'});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    applyServer(await r.json());
+    srvFails=0;
+    if(!srvOk){ srvOk=true; setFeedBadge(); }
+    return true;
+  }catch(e){
+    if(++srvFails>2 && srvOk){ srvOk=false; srvPct=null; srvLive=null; setFeedBadge(); }
+    return false;
+  }
+}
+
+/* ---------- targets ----------
+   Pads are built ONCE. A poll only moves a target; the rAF loop eases toward it
+   every frame, so motion is continuous between samples instead of stepping. */
+function twapPct(f){ const a=entry[f.mint], t=twap[f.mint]; if(!a||!t) return 0; return (t-a)/a*100; }
+function livePct(f){ const a=entry[f.mint], b=cur[f.mint]; if(!a||!b) return 0; return (b-a)/a*100; }
+
+const P=[];
+let shownF=FIELD.map(()=>0), targetF=FIELD.map(()=>0);
+let shownL=FIELD.map(()=>0), targetL=FIELD.map(()=>0);
+let shownP=FIELD.map(()=>0), targetP=FIELD.map(()=>0);
+
+function buildBay(){
+  const bay=document.getElementById('bay');
+  bay.innerHTML='';
+  FIELD.forEach((f,i)=>{
+    const el=document.createElement('div');
+    el.className='pad';
+    el.innerHTML=
+      '<div class="tube">'+
+        '<div class="well">'+
+          '<div class="fuel" style="background:linear-gradient(180deg,'+f.c+','+f.c+'26)"></div>'+
+          '<div class="live"></div>'+
+          '<div class="deck"></div>'+
+        '</div>'+
+        '<canvas class="stage"></canvas>'+
+      '</div>'+
+      '<div class="badge"></div>'+
+      '<div class="pct flat">+0.00%</div>'+
+      '<div class="who"><b>'+f.sym+'</b><span>'+f.name+'</span></div>';
+    bay.appendChild(el);
+    const cv=el.querySelector('canvas');
+    P.push({pad:el, well:el.querySelector('.well'), fuel:el.querySelector('.fuel'),
+            live:el.querySelector('.live'), cv:cv, ctx:cv.getContext('2d'),
+            pct:el.querySelector('.pct'), badge:el.querySelector('.badge'),
+            smoke:[], w:0, h:0});
+  });
+  if(RO) P.forEach(p=>RO.observe(p.cv));
+  measure();
+}
+function measure(){
+  const dpr=Math.min(2,window.devicePixelRatio||1);
+  P.forEach(p=>{
+    const r=p.cv.getBoundingClientRect();
+    if(r.width<8||r.height<8) return;            // not laid out yet - leave it alone
+    const w=Math.round(r.width), h=Math.round(r.height);
+    if(w===p.w&&h===p.h) return;
+    p.w=w; p.h=h;
+    p.cv.width=Math.round(w*dpr); p.cv.height=Math.round(h*dpr);
+    p.ctx.setTransform(dpr,0,0,dpr,0,0);
+    p.ctx.imageSmoothingEnabled=false;
+  });
+}
+/* the canvas has no size until the grid has laid out, and the web fonts land
+   later still - a one-shot measure at build time reads 0 and the whole bay
+   renders against the fallback height. Observe instead. */
+const RO = window.ResizeObserver ? new ResizeObserver(measure) : null;
+addEventListener('resize',measure);
+addEventListener('load',measure);
+if(document.fonts&&document.fonts.ready) document.fonts.ready.then(measure);
+
+function setTargets(){
+  const ps = srvOk && srvPct ? srvPct.slice() : FIELD.map(twapPct);
+  const ls = srvOk && srvLive ? srvLive.slice() : FIELD.map(livePct);
+  /* the TANKS own the axis. Scaling to the live prices too let one volatile
+     coin squash every fuel column into a band in the middle; the fuel is what
+     settles the round, so it gets the full tube and the live line clamps. */
+  const fl=ps.concat([0]);
+  const lo=Math.min.apply(null,fl), hi=Math.max.apply(null,fl);
+  const span=Math.max(hi-lo,0.30);
+  const lead=Math.max.apply(null,ps);
+  if(settled&&winner<0) winner=ps.indexOf(lead);
+  FIELD.forEach((f,i)=>{
+    targetP[i]=ps[i];
+    targetF[i]=0.05+((ps[i]-lo)/span)*0.62;
+    targetL[i]=Math.max(0.01,Math.min(0.97, 0.05+((ls[i]-lo)/span)*0.62));
+    P[i].pad.classList.toggle('win', settled&&i===winner);
+    P[i].pad.classList.toggle('scrub', settled&&i!==winner);
+    P[i].pad.classList.toggle('mine', myPad===i);
+    P[i].badge.textContent = settled ? (i===winner?'LIFTOFF':'SCRUBBED') : (myPad===i?'YOUR PAD':'');
+  });
+}
+
+/* ---------- the animation ----------
+   Fuel + live line stay in the DOM (cheap). Rocket, flame and exhaust are
+   painted per frame on a per-pad canvas so they bob, flicker and billow. */
+const rnd=(a,b)=>a+Math.random()*(b-a);
+
+function flame(g,cx,y,len,w,t){
+  if(len<PX) return;
+  for(let s=0;s<len;s+=PX){
+    const f=s/len;
+    const jit=Math.sin(t/55+s/7)*0.18+Math.sin(t/23+s/3)*0.12;
+    const hw=Math.max(PX,Math.round((w*(1-f*0.82)*(1+jit))/PX)*PX);
+    /* exhaust ramp taken from the token art: white-hot core, cream gold, peach */
+    g.fillStyle = f<0.18 ? '#FDFCF9' : f<0.4 ? '#FDF6D8' : f<0.72 ? '#FBC7A9' : 'rgba(249,184,167,.5)';
+    g.fillRect(cx-hw/2, y+s, hw, PX);
+  }
+}
+
+function puff(p,cx,y,n,hot){
+  const cap = hot?170:90;
+  for(let i=0;i<n&&p.smoke.length<cap;i++)
+    p.smoke.push({
+      x:cx+rnd(hot?-16:-6, hot?16:6), y:y+rnd(-2,4),
+      vx:rnd(hot?-72:-26, hot?72:26), vy:rnd(hot?-22:-6, hot?26:34),
+      life:0, max:rnd(hot?1.2:0.7, hot?2.8:1.7),
+      sz:PX*(hot?2:1)*(Math.random()<0.45?2:1), hot:hot});
+}
+
+function drawPad(i,now,dt){
+  const p=P[i], g=p.ctx, W=p.w, H=p.h;
+  g.clearRect(0,0,W,H);
+  const lt = (i===winner&&launchAt) ? Math.min(1,(Date.now()-launchAt)/LAUNCH_MS) : 0;
+  const climb = Math.pow(lt,2.2);
+  /* hold-down release: the pad shudders for the first beat, then it goes */
+  const shake = (lt>0&&lt<0.22&&!REDUCED) ? Math.round(rnd(-1,1))*PX : 0;
+  const cx=Math.round(W/2/PX)*PX + shake;
+  const fuelPx=shownF[i]*H;
+  const bob = (REDUCED||settled) ? 0 : (Math.sin(now/430+i*1.9)>0 ? 0 : PX);
+  const baseY = H - fuelPx - climb*(H+300);
+  const topY  = Math.round((baseY - RH*PX + bob)/PX)*PX;
+
+  /* exhaust */
+  for(let s=p.smoke.length-1;s>=0;s--){
+    const q=p.smoke[s]; q.life+=dt/1000;
+    if(q.life>=q.max){ p.smoke.splice(s,1); continue; }
+    const f=q.life/q.max;
+    q.x+=q.vx*dt/1000; q.y+=q.vy*dt/1000; q.vy+=26*dt/1000;
+    g.globalAlpha=(1-f)*(q.hot?0.5:0.34);
+    g.fillStyle=q.hot?(f<0.3?'#FDF6D8':'#8C7A74'):'#5E6E9E';
+    const sz=q.sz+Math.round(f*2)*PX;
+    g.fillRect(Math.round(q.x/PX)*PX, Math.round(q.y/PX)*PX, sz, sz);
+  }
+  g.globalAlpha=1;
+
+  /* thrust = how hard the live price is pouring in above the tank average */
+  let thrust = 0.18 + Math.max(0, shownL[i]-shownF[i])*3.4;
+  if(settled) thrust = (i===winner) ? 0.75+climb*2.6 : 0.04;
+  thrust=Math.min(3.4,thrust);
+
+  /* once it has left the pad the winner is drawn on the sky overlay instead,
+     so it can climb past the tube, past the header and off the page */
+  if(!(i===winner&&launchAt)){
+    flame(g, cx, baseY, Math.round(thrust*30/PX)*PX, 13, now);
+    g.drawImage(SPR[i], 0,0,RW,RH, cx-(RW*PX)/2, topY, RW*PX, RH*PX);
+  }
+
+  if(!REDUCED){
+    if(i===winner&&launchAt&&lt<0.75) puff(p,cx,H-6,lt<0.25?9:5,true);
+    else if(!settled&&thrust>0.55&&Math.random()<0.25) puff(p,cx,baseY+8,1,false);
+  }
+}
+
+/* ---------- the sky ----------
+   A viewport-fixed overlay. The pad canvases are clipped to their tubes, so the
+   winner is handed off to this one at T-0 and climbs out of the page. */
+const sky=document.getElementById('sky'), sctx=sky.getContext('2d');
+let skyW=0, skyH=0, lx=0, ly=0, trail=[];
+function skySize(){
+  const d=Math.min(2,window.devicePixelRatio||1);
+  skyW=window.innerWidth; skyH=window.innerHeight;
+  sky.width=Math.round(skyW*d); sky.height=Math.round(skyH*d);
+  sctx.setTransform(d,0,0,d,0,0); sctx.imageSmoothingEnabled=false;
+}
+addEventListener('resize',skySize);
+
+function beginLaunch(){
+  if(winner<0) return;
+  const p=P[winner], r=p.cv.getBoundingClientRect();
+  lx=Math.round(r.left+r.width/2);
+  ly=Math.round(r.bottom - shownF[winner]*p.h);
+  trail=[]; skySize(); sky.classList.add('on');
+}
+function endLaunch(){ trail=[]; sky.classList.remove('on'); sctx.clearRect(0,0,skyW,skyH); }
+
+function drawSky(now,dt){
+  if(!launchAt||winner<0) return;
+  const lt=Math.min(1,(Date.now()-launchAt)/LAUNCH_MS);
+  const y=ly-Math.pow(lt,2.2)*(ly+260);
+  sctx.clearRect(0,0,skyW,skyH);
+  if(!REDUCED&&lt<0.99)
+    for(let i=0;i<3&&trail.length<280;i++)
+      trail.push({x:lx+rnd(-9,9), y:y+rnd(2,20), life:0, max:rnd(0.5,1.7),
+                  sz:PX*(Math.random()<0.5?2:1)});
+  for(let i=trail.length-1;i>=0;i--){
+    const q=trail[i]; q.life+=dt/1000;
+    if(q.life>=q.max){ trail.splice(i,1); continue; }
+    const f=q.life/q.max;
+    sctx.globalAlpha=(1-f)*0.5;
+    sctx.fillStyle = f<0.22 ? '#FDF6D8' : f<0.5 ? '#A7867C' : '#5E6E9E';
+    sctx.fillRect(Math.round(q.x/PX)*PX, Math.round((q.y+f*30)/PX)*PX, q.sz, q.sz);
+  }
+  sctx.globalAlpha=1;
+  const cx=Math.round(lx/PX)*PX;
+  flame(sctx, cx, y, Math.round((1.3+Math.pow(lt,2.2)*2.4)*34/PX)*PX, 15, now);
+  sctx.drawImage(SPR[winner], 0,0,RW,RH, cx-(RW*PX)/2, Math.round(y-RH*PX), RW*PX, RH*PX);
+}
+
+/* Easing is driven off the WALL clock, not the rAF timestamp. The frame clock
+   can run slow or stall independently of real time (an occluded window, a
+   throttled tab, a virtual-time capture) and easing off it leaves the tanks
+   reading a level that is minutes stale. dt>600ms means the page was frozen:
+   snap to the truth, don't crawl toward it. */
+let lastT=Date.now();
+function frame(){
+  const now=Date.now();
+  const raw=now-lastT; lastT=now;
+  const dt=Math.min(120,raw);
+  const k = raw>600 ? 1 : 1-Math.exp(-raw/260);
+  for(let i=0;i<FIELD.length;i++){
+    shownF[i]+=(targetF[i]-shownF[i])*k;
+    shownL[i]+=(targetL[i]-shownL[i])*k;
+    shownP[i]+=(targetP[i]-shownP[i])*k;
+    P[i].fuel.style.height=(shownF[i]*P[i].h).toFixed(1)+'px';
+    P[i].live.style.bottom=(shownL[i]*P[i].h).toFixed(1)+'px';
+    const v=shownP[i];
+    P[i].pct.textContent=(v>=0?'+':'')+v.toFixed(2)+'%';
+    P[i].pct.className='pct '+(v>0.0005?'up':v<-0.0005?'down':'flat');
+    drawPad(i,now,dt);
+  }
+  drawSky(now,dt);
+  requestAnimationFrame(frame);
+}
+
+/* ---------- clock ----------
+   Wall-clock derived, and driven by BOTH rAF and a timer, so a throttled tab
+   still reaches T-0 and still settles instead of hanging mid-count. */
+function clockStep(){
+  const left=Math.max(0,(srvOk?raceMs:RACE_MS)-(Date.now()-tStart));
+  const s=Math.ceil(left/1000);
+  const c=document.getElementById('clock');
+  c.textContent='T-'+String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+  c.classList.toggle('warn',s<=10);
+  const st=document.getElementById('state');
+  if(left<=0&&!settled){
+    settled=true; setTargets(); launchAt=Date.now(); beginLaunch();
+    st.textContent='LIFTOFF'; st.className='pill p-go';
+    vault=vault-pot+(6+Math.random()*22);
+    if(!srvOk) setTimeout(newRound,7000);
+  } else if(left>0){
+    const hot=s<=10;
+    st.textContent = hot?'TERMINAL COUNT':'FUELING';
+    st.className='pill '+(hot?'p-hot':'p-live');
+    P.forEach(p=>p.pad.classList.toggle('hot',hot));
+  }
+}
+function tick(){ clockStep(); requestAnimationFrame(tick); }
+
+/* ---------- galaxies ----------
+   A galaxy is one win. The count is cumulative and resets only on a sell, so
+   the curve has to be a slow ladder, not geometric: a continuous holder wins
+   ~1/8 of 480 rounds a day (~60 galaxies/day) and would max out a 7-tier
+   1.9^n curve in under two hours. Bounded at 4.7x so a veteran never takes
+   more than ~4.7x a newcomer's slice of the same pot. */
+const GALAXY_LADDER=[[20000,4.7],[5000,3.6],[1000,2.8],[200,2.1],[50,1.6],[10,1.25],[0,1.0]];
+function galaxyMult(g){ for(const [t,m] of GALAXY_LADDER) if(g>=t) return m; return 1; }
+
+/* ---------- the address box ---------- */
+let myPad=-1, myAddr='';
+async function refreshMe(){
+  if(!myAddr||myAddr.length<32){document.getElementById('me').classList.remove('on');myPad=-1;return;}
+  const p=await persona(myAddr);
+  const h=await sha(myAddr+'‖'+seedHex);
+  myPad=hnum(h)%FIELD.length;
+  const seats=1+(hslice(p.h,3)%5);
+  const galaxies=hslice(p.h,4)%26000;
+  document.getElementById('menm').textContent=p.name;
+  document.getElementById('mepad').textContent=FIELD[myPad].sym;
+  document.getElementById('meseats').textContent=seats+(seats>1?' seats':' seat');
+  document.getElementById("megalaxies").textContent=galaxies.toLocaleString();
+  document.getElementById('memult').textContent=galaxyMult(galaxies).toFixed(2)+'×';
+  const f=document.getElementById('meform'); f.innerHTML='';
+  for(let i=0;i<10;i++){const w=(parseInt(p.h.slice(i*3,i*3+3),16)%10)<5;
+    const e=document.createElement('i'); e.className=w?'w':'l'; e.textContent=w?'W':'L'; f.appendChild(e);}
+  document.getElementById('me').classList.add('on');
+  setTargets();
+}
+document.getElementById('addr').addEventListener('input',function(e){myAddr=e.target.value.trim();refreshMe();});
+
+/* ---------- demo galaxy board ---------- */
+(async()=>{
+  const demo=['7xKQ...m4Tz','BvXe...9kLp','3Hq2...RtYu','Cw8N...vB1s','FgL5...zQ7m','9ZzA...k3Nn'];
+  const counts=[24180,9640,3175,1290,410,62];
+  const b=document.getElementById('board'); let html='';
+  for(let i=0;i<demo.length;i++){
+    const p=await persona(demo[i]+i);
+    const g=counts[i];
+    html+='<div class="row"><span class="r">'+(i+1)+'</span><span>'+p.name+'</span>'+
+          '<span class="s">'+g.toLocaleString()+'</span><span class="m">'+galaxyMult(g).toFixed(2)+'×</span></div>';
+  }
+  b.innerHTML=html;
+})();
+
+
+
+/* ---------- language ---------- */
+const LANGS=['en','zh','es'];
+let LANG=(new URLSearchParams(location.search).get('lang')
+  ||localStorage.getItem('rot.lang')
+  ||(navigator.language||'en').slice(0,2));
+if(!LANGS.includes(LANG)) LANG='en';
+const T=()=>window.I18N[LANG];
+
+function renderHow(){
+  const t=T(); const el=document.getElementById('howBody'); if(!el) return;
+  el.innerHTML='<h2>'+t.howTitle+'</h2><p class="lede">'+t.howLede+'</p>'+
+    '<ol class="steps">'+t.steps.map(([b,s])=>'<li><b>'+b+'</b><span>'+s+'</span></li>').join('')+'</ol>'+
+    '<div class="callout">'+t.callout+'</div>';
+}
+function ladderHtml(){
+  const t=T();
+  const rows=[[10,'1.25×'],[50,'1.6×'],[200,'2.1×'],['1,000','2.8×'],['5,000','3.6×'],['20,000','4.7×']];
+  return '<p>'+t.ladderIntro+'</p><table class="ladder"><tr><th>'+t.ladderHead.join('</th><th>')+'</th></tr>'+
+    rows.map((r,i)=>'<tr><td>'+r[0]+'</td><td>'+r[1]+'</td><td>'+t.ladderWhen[i]+'</td></tr>').join('')+
+    '</table><p>'+t.ladderOutro+'</p>';
+}
+function renderFaq(){
+  const t=T(); const el=document.getElementById('faqBody'); if(!el) return;
+  el.innerHTML='<h2>'+t.faqTitle+'</h2>'+t.faq.map(([q,a],i)=>
+    '<details'+(i===0?' open':'')+'><summary>'+q+'</summary>'+(a==='LADDER'?ladderHtml():a)+'</details>').join('');
+}
+function applyLang(code){
+  if(code){ LANG=code; try{localStorage.setItem('rot.lang',code);}catch(e){} }
+  const t=T();
+  document.documentElement.lang = LANG==='zh'?'zh-Hans':LANG;
+  const set=(sel,html)=>{const n=document.querySelector(sel); if(n) n.innerHTML=html;};
+  set('.hd .tag',t.tagline);
+  set('.demo',t.demoBar);
+  for(const k of LANGS.concat()){}
+  document.querySelectorAll('.tab').forEach(b=>{ b.textContent=t.tabs[b.dataset.tab]||b.textContent; });
+  const vs=document.querySelectorAll('.vault div span');
+  if(vs[0]) vs[0].textContent=t.vault.vault;
+  if(vs[1]) vs[1].textContent=t.vault.pot;
+  if(vs[2]) vs[2].textContent=t.vault.cadence;
+  const h3=document.querySelectorAll('#tab-race .panel h3');
+  if(h3[0]) h3[0].textContent=t.board;
+  if(h3[1]) h3[1].textContent=t.mePanel;
+  if(h3[2]) h3[2].textContent=t.fuelPanel;
+  set('#tab-race .note',t.boardNote);
+  const addr=document.getElementById('addr'); if(addr) addr.placeholder=t.mePlaceholder;
+  set('#tab-race .hint',t.meHint);
+  const kv=document.querySelectorAll('#me .kv span');
+  const kvs=[t.kv.pad,t.kv.seats,t.kv.galaxies,t.kv.mult];
+  kv.forEach((n,i)=>{ if(kvs[i]) n.textContent=kvs[i]; });
+  const fp=document.querySelectorAll('#tab-race .panel')[2];
+  if(fp){ const ps=fp.querySelectorAll('p');
+    if(ps[0]) ps[0].innerHTML=t.fuel1; if(ps[1]) ps[1].innerHTML=t.fuel2; if(ps[2]) ps[2].innerHTML=t.fuel3; }
+  set('footer',t.footer);
+  renderHow(); renderFaq();
+  document.querySelectorAll('.lang').forEach(b=>b.classList.toggle('on',b.dataset.lang===LANG));
+}
+(function buildLangs(){
+  const box=document.getElementById('langs'); if(!box) return;
+  box.innerHTML=LANGS.map(c=>'<button class="lang" data-lang="'+c+'">'+window.I18N[c].label+'</button>').join('');
+  box.querySelectorAll('.lang').forEach(b=>b.addEventListener('click',()=>applyLang(b.dataset.lang)));
+})();
+
+/* ---------- tabs ---------- */
+const PANES=['race','how','faq'];
+function showTab(t){
+  document.querySelectorAll('.tab').forEach(b=>{
+    const on=b.dataset.tab===t;
+    b.classList.toggle('on',on);
+    b.setAttribute('aria-selected',on?'true':'false');
+  });
+  for(const p of PANES){ const el=document.getElementById('tab-'+p); if(el) el.hidden=(p!==t); }
+  if(t==='race') measure();            // canvases cannot size while hidden
+}
+document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>{
+  showTab(b.dataset.tab);
+  history.replaceState(null,'',b.dataset.tab==='race'?location.pathname+location.search:'#'+b.dataset.tab);
+}));
+if(location.hash){ const t=location.hash.slice(1); if(PANES.includes(t)) showTab(t); }
+
+/* ---------- go ---------- */
+(async()=>{ applyLang(); buildSprites(); buildBay(); requestAnimationFrame(frame);
+  setFeedBadge();
+  const connected = await pollServer();
+  if(!connected) await newRound();
+  setInterval(pollServer,POLL_MS);
+  setInterval(()=>poll(false),POLL_MS);
+  setInterval(clockStep,250); tick(); })();
+</script>
+<script type="application/json" id="rotator-facts">
+{
+ "name": "ROTATOR",
+ "token": "$GALAXY",
+ "chain": "solana",
+ "status": "pre-launch-demo",
+ "asOf": "2026-09-13",
+ "machineReadable": "/llms.txt",
+ "notTrueYet": [
+  "payout destinations are locked",
+  "the operator cannot change where fees go",
+  "the game is trustless"
+ ],
+ "trust": {
+  "roundOutcomeVerifiable": true,
+  "padAssignmentVerifiable": true,
+  "splitEnforcedByCode": false,
+  "destinationsImmutable": false,
+  "reason": "vault program written but not deployed; upgrade authority not burned"
+ },
+ "addresses": {
+  "galaxyMint": null,
+  "payoutToken": "METvsvVRapdj9cFLzq4Tr43xK4tAjQfwX76z3n6mWQL",
+  "teamWallet": "BctPqouosqBE9LdN2ha6kvMmagHTrscVGoJvWW7XqYfN",
+  "meteoraDbc": "dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN",
+  "meteoraDammV2": "cpamdpZCGKUy5JxQXB4dcpGPiikHawvSWAd6mEn1sGG",
+  "vaultProgram": null
+ },
+ "round": {
+  "ms": 180000,
+  "align": "floor(unix_ms/180000)",
+  "samples": 90,
+  "seed": "sha256(blockhash + U+2016 + round_number)",
+  "assignment": "int(sha256(address + U+2016 + seed)[0:12],16) mod 8",
+  "winner": "highest mean-price move vs first sample"
+ },
+ "splitBps": {
+  "crew": 8000,
+  "dividend": 1300,
+  "team": 500,
+  "ops": 200
+ },
+ "eligibilityRaw": "100000000000",
+ "eligibilityTokens": 100000,
+ "decimals": 6,
+ "feeTax": "3%",
+ "creatorShareOfTax": "50%",
+ "effectiveOfVolume": "1.5%"
+}
+</script>
+</body>
+</html>
