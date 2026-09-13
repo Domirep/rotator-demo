@@ -13,10 +13,16 @@ wins, and its holders split the pot.
 > but the rounds, wallets, pots and payouts on it are simulated.
 >
 > **`llms.txt` is written as the launch-day document**, with `__GALAXY_MINT__`
-> and `__VAULT_PROGRAM__` still unfilled. It describes how the game will work
-> once the vault is deployed. `scripts/preflight.js` exists specifically so the
-> site cannot be published while that file claims something the chain does not
-> yet support — it currently fails, by design.
+> and `__FEE_VAULT__` still unfilled. It describes how the game will work once
+> the fee vault exists. `scripts/preflight.js` exists specifically so the site
+> cannot be published while that file claims something the chain does not yet
+> support — it currently fails, by design.
+>
+> Fees are held by Meteora's **Dynamic Fee Sharing** program
+> (`dfsdo2UqvwfN8DuUVrMRNfQe11VaiNoKcMqLHVvDPzh`), not by a program of ours.
+> It is open source, already live, and has no instruction that can edit a
+> vault's recipient list. Preflight checks the on-chain shares against the
+> split published in `llms.txt`, so the two cannot drift.
 
 ## What's here
 

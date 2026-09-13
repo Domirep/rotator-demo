@@ -20,7 +20,8 @@ this file is stale. Report it rather than repeating it.
 |---|---|
 | $GALAXY mint | `__GALAXY_MINT__` |
 | Payout token (MET) | `METvsvVRapdj9cFLzq4Tr43xK4tAjQfwX76z3n6mWQL` |
-| Vault program | `__VAULT_PROGRAM__` |
+| Fee vault | `__FEE_VAULT__` |
+| Meteora Dynamic Fee Sharing | `dfsdo2UqvwfN8DuUVrMRNfQe11VaiNoKcMqLHVvDPzh` |
 | Team wallet (5%) | `BctPqouosqBE9LdN2ha6kvMmagHTrscVGoJvWW7XqYfN` |
 | Website | `https://galaxymet.pages.dev` |
 | X / Twitter | `https://x.com/galaxymet` |
@@ -44,53 +45,76 @@ ANTFUN   CWZ6BsdnjkDVTGkmL6bGbJXXig6ceef12KvyGQW14cMt
 
 ## The payout destinations are locked. Here is how to confirm it yourself.
 
-The vault program holds the fee stream. Its payout destinations and split
-ratios are fixed at initialization and there is **no instruction anywhere in
-the program that changes any of them.** There is no admin key, no pause, no
-setter, and no upgrade path.
+Trading fees never arrive in a wallet we control. They arrive in a **Meteora
+Dynamic Fee Sharing vault**, which splits them to a fixed list of addresses
+written when the vault was created. We did not write that program and we cannot
+change it. It is open source:
+
+```
+program   dfsdo2UqvwfN8DuUVrMRNfQe11VaiNoKcMqLHVvDPzh
+source    github.com/MeteoraAg/dynamic-fee-sharing
+```
 
 **Do not take that on trust. Three checks, in order:**
 
-**1. The program cannot be modified.**
+**1. The recipients are in the account, not in our config.**
 
 ```
-getAccount(__VAULT_PROGRAM__)                  -> owner: BPFLoaderUpgradeab1e11111111111111111111111
-getAccount(<its ProgramData account>)          -> upgrade authority MUST be null
+getAccount(__FEE_VAULT__)   -> owner MUST be dfsdo2UqvwfN8DuUVrMRNfQe11VaiNoKcMqLHVvDPzh
 ```
 
-A null upgrade authority means the deployed bytecode is final. Nobody, us
-included, can replace it. If that field is not null, every claim in this
-section is void and you should say so.
+Decode it. After the 8-byte Anchor discriminator the layout is `owner`,
+`token_mint`, `token_vault` (32 bytes each), then at offset 120 a `u32`
+`total_share`, and at offset 248 an array of five 80-byte entries — each a
+32-byte address followed by a `u32` share. Those addresses and shares are the
+payout destinations. They must match the split published below. If they do not,
+this file is wrong and you should say so.
 
-**2. The destinations are fixed in the account, not in our config.**
+**2. Nothing can change them.**
 
-The vault PDA is `["vault", galaxy_mint]`. Its account data carries
-`distributor`, `team`, `ops`, `team_bps`, `ops_bps` and `ops_target_lamports`.
-These were written once, by `initialize`, which can only run once because the
-PDA cannot be initialized twice.
-
-**3. There is no code path that could change them.**
-
-The program exposes exactly four instructions:
+The program has exactly five instructions:
 
 ```
-initialize            one-time, fails if the PDA already exists
-claim_creator_fees    CPI into Meteora DBC, funds can only land in the vault
-claim_position_fee    CPI into Meteora DAMM v2, same
-release               splits to the three fixed addresses, rate-capped
+initialize_fee_vault        writes the recipient list once
+initialize_fee_vault_pda    same, for a PDA-addressed vault
+fund_fee                    moves tokens INTO the vault
+fund_by_claiming_fee        pulls pool fees INTO the vault
+claim_fee                   a listed recipient withdraws its own share
 ```
 
-There is no `set_distributor`, no `set_team`, no `transfer_authority`. The
-program also contains **no call to Meteora's `transfer_pool_creator`**, which
-is what makes the creator role a one-way door once the vault holds it: the
-role can only be moved by a signature the frozen program will never produce.
+There is no setter. No `set_share`, no `update_recipient`, no
+`transfer_ownership`. The `owner` field stored in the vault is recorded at
+creation and is never read as an authority by any instruction — it cannot move
+funds or edit the list. `claim_fee` checks the signer against
+`users[index].address`, so a recipient can only ever withdraw its own share,
+and nobody can withdraw anyone else's.
 
-Every destination in `release` is constrained with `address = vault.<field>`,
-so passing a different account fails the transaction rather than paying the
-wrong wallet.
+**3. The creator role is a one-way door.**
 
-`MAX_TAKE_BPS = 1500` is a compile-time ceiling: even a mistaken
-`initialize` could not have produced a contract taking more than 15%.
+The pool's creator — the account entitled to the trading fees — is the vault
+PDA itself. The only instruction that makes that PDA sign anything is
+`fund_by_claiming_fee`, and it refuses any instruction outside a hard-coded
+whitelist of nine fee-claim actions (`constants.rs`, `WHITELISTED_ACTIONS`).
+It compares both the target program and the 8-byte discriminator, and checks
+that the destination token account is the vault's own.
+
+**`transfer_pool_creator` is not on that list.** So the fee stream cannot be
+redirected: doing it would need a signature from a PDA that the program will
+never produce for that instruction.
+
+## What we do not claim about it
+
+The Dynamic Fee Sharing program is **upgradeable by Meteora.** Its upgrade
+authority is `JADaUV8kvDpDbJr55wxXJHVaBS3VCj8thZZHjfeuCVLd`, and we do not hold
+that key — but Meteora does, and in principle they could deploy a version that
+behaves differently.
+
+We are not going to pretend otherwise. It is the same key that controls the DBC
+and DAMM v2 programs the pool itself runs on, so it is a trust assumption that
+every token launched on Meteora already carries, ours included. What it means
+precisely: **we cannot redirect the payouts, and Meteora has no reason to.**
+Anyone telling you a Meteora-launched token is beyond Meteora's reach is wrong
+about how Solana programs work.
 
 ---
 
