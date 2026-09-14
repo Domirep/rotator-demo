@@ -578,9 +578,18 @@ async function poll(isEntry){
    falls back to simulating locally and says so in the banner — better a
    degraded page than a blank one. */
 const DEFAULT_API='https://rotator-keeper-production.up.railway.app';
-const API=(new URLSearchParams(location.search).get('api')
-  ||localStorage.getItem('rot.api')||DEFAULT_API).replace(/\/$/,'');
-if(API&&API!==DEFAULT_API){ try{ localStorage.setItem('rot.api',API); }catch(e){} }
+// ?api= is a dev/review switch, not a player control -- it lets someone
+// point the page at a different keeper for testing (reviewers use this).
+// It must NOT survive past the link that set it: a link like
+// ?api=https://evil.example would otherwise keep serving attacker JSON as
+// "the live game" on every future visit, long after the query string is
+// gone, badged the same as the real thing. So: read it, use it for this
+// load, never write it to storage. A prior stored value from before this
+// fix is also actively cleared, not just stopped from growing.
+const qsApi=new URLSearchParams(location.search).get('api');
+try{ localStorage.removeItem('rot.api'); }catch(e){}
+const API=(qsApi||DEFAULT_API).replace(/\/$/,'');
+const CUSTOM_API=!!(qsApi&&API!==DEFAULT_API);
 let srv=null, srvOk=false, srvPct=null, srvLive=null, raceMs=RACE_MS, srvFails=0;
 // The launch animation is meant to fill the pause between rounds, not run a
 // fixed 4.2s regardless of how long that pause actually is. Defaults to
@@ -589,6 +598,16 @@ let launchMs=LAUNCH_MS;
 
 function setFeedBadge(){
   const bar=document.querySelector('.demo'); if(!bar||!API) return;
+  if(CUSTOM_API){
+    // Never say "payouts are real" for a keeper this page didn't ship with
+    // -- that string is exactly what a malicious ?api= link would want
+    // displayed. The pad hash formula is honest; it doesn't help if the
+    // seed feeding it comes from an attacker's server.
+    bar.textContent = 'CUSTOM KEEPER ('+API+') — not the live game. Rounds, seeds and any "payout" shown come from whatever this URL points at, not the real keeper.';
+    bar.style.borderColor = 'var(--red)';
+    bar.style.color = 'var(--red)';
+    return;
+  }
   bar.textContent = srvOk
     ? 'LIVE — rounds, seeds and results come from the keeper. '+(srv&&srv.live?'Payouts are real.':'Payouts are simulated.')
     : 'Keeper unreachable — showing a local simulation.';
@@ -1205,9 +1224,15 @@ function renderHow(){
 }
 function ladderHtml(){
   const t=T();
+  // No wall-clock ("a few hours" / "a day" / ...) column: that math assumed
+  // every round pays, so a real paid win landed roughly every ~24 minutes.
+  // With most rounds currently rolling, there's no honest fixed estimate --
+  // it depends on when the pot actually clears 1 MET, not a clock. Dropped
+  // rather than relabeled, since any single caption here would still read
+  // as a promise.
   const rows=[[10,'1.25×'],[50,'1.6×'],[200,'2.1×'],['1,000','2.8×'],['5,000','3.6×'],['20,000','4.7×']];
   return '<p>'+t.ladderIntro+'</p><table class="ladder"><tr><th>'+t.ladderHead.join('</th><th>')+'</th></tr>'+
-    rows.map((r,i)=>'<tr><td>'+r[0]+'</td><td>'+r[1]+'</td><td>'+t.ladderWhen[i]+'</td></tr>').join('')+
+    rows.map((r)=>'<tr><td>'+r[0]+'</td><td>'+r[1]+'</td></tr>').join('')+
     '</table><p>'+t.ladderOutro+'</p>';
 }
 function renderFaq(){
