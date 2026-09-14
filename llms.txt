@@ -29,19 +29,106 @@ this file is stale. Report it rather than repeating it.
 | Meteora DBC | `dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN` |
 | Meteora DAMM v2 | `cpamdpZCGKUy5JxQXB4dcpGPiikHawvSWAd6mEn1sGG` |
 
-The eight competing memecoins:
+## The eight competing coins are drawn every 24 hours
+
+Nobody picks them. Not us, not a config file somebody edits between rounds.
+Discretion over which coins are in the field is discretion over who wins, so
+the field comes from published criteria and a seed nobody knew in advance.
+
+**Today's field, the seed it came from and the pool it was drawn against are
+published live at `/api/slate` on the keeper.** Everything below is how to
+check that draw.
+
+### 1. The eligible pool
+
+Rebuilt at each draw from two Jupiter token endpoints, unioned:
 
 ```
-PUMP     pumpCmXqMfrsAkQ5r49WcJnRayYRqmXz6ae8H7H9Dfn
-BONK     DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263
-USELESS  Dz9mQ9NzkBcCsuGPFJ3r1bS4wgqKMHBPiVuniW8Mbonk
-EMBER    5dvXTZ5qwgafnHtwu3Ls3QrWx1U4LQsFeCuJgkk4QEC6
-WIF      EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm
-PEPE     B5WTLaRwaUQpKk7ir1wniNB6m5o8GgMrimhKMYan2R6B
-STONK    6GmAFSYs4gk3FDao5FzzySQpPZaWsa4rUJHacpMpUNgx
-ANTFUN   CWZ6BsdnjkDVTGkmL6bGbJXXig6ceef12KvyGQW14cMt
+lite-api.jup.ag/tokens/v2/toporganicscore/24h?limit=100
+lite-api.jup.ag/tokens/v2/toptraded/24h?limit=100
 ```
 
+A token is eligible when ALL of these hold:
+
+```
+Jupiter-verified
+liquidity            >= $250,000
+24h volume           >= $500,000
+volatility           >= 1.5%     mean |price change| over the 1h, 6h and 24h windows
+live price           present on the v3 price feed at the draw
+```
+
+And it is excluded, by rule, when any of these hold:
+
+```
+the payout token       MET cannot be a rocket priced in the prize
+a stablecoin           USDC USDT USDS USDG PYUSD USDE EURC JupUSD CASH FDUSD USD1 SUSD AUSD USDY
+a liquid-staking token jitoSOL mSOL bSOL jupSOL INF hSOL JLP bnSOL dSOL vSOL bbSOL LST
+a wrapped major        SOL WSOL BTC WBTC cbBTC zBTC xBTC ETH WETH ZEC XMR LTC DOGE ADA LINK AVAX SUI APT HYPE XRP BNB
+a tokenised equity     ticker matching /[A-Z]x$/ -- SPYx, NVDAx, TSLAx, QQQx
+a bridged asset        name beginning 'Wrapped' -- Wrapped SOL, Wrapped BTC (Portal), Wrapped NEAR
+```
+
+**Why a volatility floor.** A rocket has to be able to move. A stablecoin never
+does, and a wrapped major moves an order of magnitude less than a memecoin over
+three minutes, which would quietly turn eight pads into five. Measured on
+2026-09-13: equities and majors sat at 0.12-0.99%, memecoins at 1.8-34%.
+
+**Why the name rule as well as the ticker list.** The ticker list missed wNEAR.
+Names do not: bridged assets say 'Wrapped' in them.
+
+What survives is ranked by volatility, **ties broken by mint**, capped at the
+top 30, then sorted by mint. The mint sort is the published order and the draw
+indexes into it -- volatility order changes between two people fetching seconds
+apart, mint order does not.
+
+If fewer than 10 qualify, the volatility floor drops in steps of 0.25% until 10
+do. Mechanical, so a thin day is not a judgement call made on the day.
+
+### 2. The daily seed
+
+```
+day         = floor(unix_ms / 86400000)          UTC days
+daily_seed  = sha256(blockhash + '|' + day)
+```
+
+`blockhash` is the one from the **first round of that UTC day**, already
+published on that round. So the seed is derived from a value that was visible
+independently of us, and it is unpredictable before the day starts.
+
+The separator is an ASCII pipe, the same as the pad formula. There are no
+non-ASCII characters in anything we hash.
+
+### 3. The draw
+
+Ten are drawn without replacement, in committed order: the first 8 race, the
+last 2 are alternates.
+
+```
+remaining = the published pool
+for k in 0..9:
+    idx = int(sha256(daily_seed + '|' + k)[0:12], 16) mod len(remaining)
+    take remaining[idx], remove it from remaining
+```
+
+Same hash idiom as the pad formula: first 12 hex characters, mod the count.
+
+### 4. The failure rule
+
+Applied **once, at the draw**, and never again. A coin with no live price at
+the draw is replaced by the next alternate in committed order. Every
+substitution is published on the slate record.
+
+**A coin that dies mid-day stays in the field.** A dead rocket is a fair
+outcome; substituting one mid-day is an operator decision, and this game does
+not make those.
+
+### What this does not change
+
+The slate is daily; **pad assignment is per round**. Which coin sits on your pad
+changes at the day roll, but which pad you are on is still
+`sha256(address|round_seed) mod 8`, re-drawn every three minutes. A new slate
+cannot move you onto or off a pad.
 ---
 
 ## The payout destinations are locked. Here is how to confirm it yourself.
