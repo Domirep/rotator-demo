@@ -316,6 +316,15 @@ seed = sha256(blockhash + "|" + round_number)      // lowercase hex
 `blockhash` is a real Solana blockhash finalized at the round's opening slot.
 It cannot be known before that slot exists. Fetch the slot and compare.
 
+**No grinding: it's one unconditional RPC call, not a search.** At the round
+boundary the keeper calls `getLatestBlockhash({commitment:'finalized'})`
+exactly once and uses whatever comes back -- no retry, no comparison against
+a target, no loop. `blockTime` on the returned slot typically lands ~10s
+before the round's own `startedAt`; that's not the keeper waiting for a
+favorable hash, it's what `finalized` commitment always costs on Solana
+(13-19 slots of lag, by design, so the hash can never be reorganized out
+from under the round). A single unconditional call has nothing to grind.
+
 **2. Any wallet's assignment**
 
 ```
