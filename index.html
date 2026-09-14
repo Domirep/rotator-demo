@@ -1047,24 +1047,34 @@ function tick(){ clockStep(); requestAnimationFrame(tick); }
 const GALAXY_LADDER=[[20000,4.7],[5000,3.6],[1000,2.8],[200,2.1],[50,1.6],[10,1.25],[0,1.0]];
 function galaxyMult(g){ for(const [t,m] of GALAXY_LADDER) if(g>=t) return m; return 1; }
 
-/* ---------- the address box ---------- */
+/* ---------- the address box ----------
+   Every stat here used to be derived from sha256(address) -- deterministic,
+   so it never visibly glitched, but 100% fabricated: a real address got a
+   real-looking pad/wins/multiplier that had nothing to do with the actual
+   game. Now sourced from the same roster the "who's on board" panel already
+   fetches (rosterData, via loadRoster()), which carries each real eligible
+   wallet's actual balance and galaxy streak. No fetch of its own, no fallback
+   to a hash when the real answer is "not eligible" or "no data yet". */
 let myPad=-1, myAddr='';
 async function refreshMe(){
   if(!myAddr||myAddr.length<32){document.getElementById('me').classList.remove('on');
     document.getElementById('checkbar').classList.remove('on');myPad=-1;paintRoster();return;}
   const p=await persona(myAddr);
-  const h=await sha(myAddr+'|'+seedHex);
-  myPad=hnum(h)%FIELD.length;
-  const seats=1+(hslice(p.h,3)%5);
-  const galaxies=hslice(p.h,4)%26000;
   document.getElementById('menm').textContent=p.name;
-  document.getElementById('mepad').textContent=FIELD[myPad].sym;
-  document.getElementById('meseats').textContent=seats+(seats>1?' seats':' seat');
-  document.getElementById("megalaxies").textContent=galaxies.toLocaleString();
+
+  let mine=null; myPad=-1;
+  if(rosterData) rosterData.pads.forEach((pad,i)=>{
+    const w=pad.wallets.find(x=>x.address===myAddr);
+    if(w){ mine=w; myPad=i; }
+  });
+
+  document.getElementById('mepad').textContent = myPad>=0 ? rosterData.pads[myPad].sym : '—';
+  document.getElementById('meseats').textContent = mine ? Number(mine.balance).toLocaleString()+' $GALAXY' : '—';
+  const galaxies = mine ? Number(mine.galaxies) : 0;
+  document.getElementById('megalaxies').textContent=galaxies.toLocaleString();
   document.getElementById('memult').textContent=galaxyMult(galaxies).toFixed(2)+'×';
-  const f=document.getElementById('meform'); f.innerHTML='';
-  for(let i=0;i<10;i++){const w=(parseInt(p.h.slice(i*3,i*3+3),16)%10)<5;
-    const e=document.createElement('i'); e.className=w?'w':'l'; e.textContent=w?'W':'L'; f.appendChild(e);}
+  document.getElementById('meform').innerHTML='';   // no per-round history endpoint yet -- show nothing rather than invent it
+
   document.getElementById('me').classList.add('on');
   document.getElementById('checkbar').classList.add('on');
   setTargets();
