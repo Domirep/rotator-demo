@@ -202,7 +202,18 @@ and nobody can withdraw anyone else's.
 **3. The creator role is a one-way door.**
 
 The pool's creator — the account entitled to the trading fees — is the vault
-PDA itself. The only instruction that makes that PDA sign anything is
+PDA itself. This is not asserted: `transfer_pool_creator` ran at slot
+`446909849` (2026-09-14T06:37:34Z), signature
+`2jks4y2dGKuAfHLDvVdwVLyjPXchC96Z4RA2SXHcECy8t6Fmx8dQccuooCJsAbvX1q7xhfqhbuqPHurgXbLvVn8N`,
+and reading the pool's live state today (`DynamicBondingCurveClient.state.getPool()`
+against `rsSz5zq1Mp3jb4fA2QHpjTvJFWnY9r8XxP2RnJdNvs1`) shows `creator ==
+4nKyrntTRvPv1LQyBGsWnngywz3DUKpse9dPEofVUV3P` — the vault, not the team
+wallet that deployed it. Check the field yourself rather than take the tx
+succeeding as proof of the current state; a later transaction could in
+principle have moved it again (nothing in the whitelist allows that, but
+"a transaction ran once" and "the field is what it should be right now"
+are different claims, and this backs both). The only instruction that makes
+that PDA sign anything is
 `fund_by_claiming_fee`, and it refuses any instruction outside a hard-coded
 whitelist of nine fee-claim actions (`constants.rs`, `WHITELISTED_ACTIONS`).
 It compares both the target program and the 8-byte discriminator, and checks
@@ -450,6 +461,14 @@ Anyone can redo it from Ember's public API. `scripts/creator-share.js` in
 **this** (public, `rotator-demo`) repo does it standalone -- it doesn't need
 the private keeper, just Ember's public `/markets` endpoint. Run it yourself;
 it reproduces the 79.9% cluster and the 2.40%-of-volume figure above.
+
+**That 79.9% is a peer cluster, not a reading on `$GALAXY` itself.** This
+mint's own row in Ember's API currently has `paidUsd: 0` -- the creator hasn't
+been paid anything yet on this token specifically, so its own share is
+undefined, not 80%. `creator-share.js` filters to tokens above $15,000 volume
+before clustering; at ~$22 this mint wouldn't clear that filter even once
+`paidUsd` moves. The 80% is what nine *other* keep-mode tokens show and is
+used to size this one, not something measured on `$GALAXY` yet.
 
 **It is still only an estimate for sizing.** The keeper uses this rate to size a
 pot before clamping it, and what actually bounds every pot is the vault's real
