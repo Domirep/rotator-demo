@@ -187,35 +187,24 @@ payout_i = pot * weight_i / sum(weights)
 Integer arithmetic, rounding down, remainder to the largest weight. The sum of
 payouts equals the pot exactly.
 
-**The dividend is a separate payout, and it reaches losing rounds.** 13% of
-every draw is credited to **every eligible holder**, not just the winning crew:
+**There is no separate holder dividend.** A 13% share once went to every
+eligible holder, win or lose. It was folded into the crew on 2026-09-13, for
+reasons we measured rather than argued:
 
-```
-dividend_i = dividend * balance_i / sum(balances)
-```
+- A median holder's pad wins every **4-5 rounds** — roughly every 12-15 minutes,
+  about 60 times a day. The dividend existed to console holders who lost a
+  round, and a 3-minute round already does that.
+- **It broke as the game grew.** At 1,000 eligible holders only 1-6% of them
+  were ever owed enough to clear the 1 MET floor, and about a fifth of the
+  budget sat as dust that could not be paid: every new holder splits the same
+  13% into smaller pieces.
+- Paying a first-time recipient costs 1,488,440 lamports of token-account rent.
+  A payout has to be worth more than the account it needs.
 
-**Pro-rata by balance only — the galaxy multiplier does not apply here.** It
-already weights the pot; applying it to both would compound the same curve
-twice.
-
-It is credited every round and **paid on a sweep**, not per round. Pushing to
-every holder 480 times a day would spend more on fees than it pays out. A
-wallet is paid once it is owed at least **1 MET**, and a sweep runs when:
-
-```
->= 50 wallets have cleared that floor      or
-60 minutes have passed since the last one  (with at least one wallet ready)
-but never less than 6 minutes apart
-```
-
-The hourly rule is the guarantee, not the schedule: a busy period sweeps on the
-wallet threshold long before the hour is up. A wallet below the floor is not
-dropped — it keeps accruing until it clears. The amount owed but not yet swept
-is published live at `/api/health` as `dividendPending`.
-
-The 1 MET floor exists because we pay the token-account rent for a first-time
-recipient (1,488,440 lamports). A dividend has to be worth more than the
-account it needs.
+That 13% went to the crew, so a pot is now **93% of the draw instead of 80%**.
+**The vault did not change.** Crew, dividend and ops were always the same
+address, and 9500 bps still goes to it — the fold is keeper arithmetic, not an
+on-chain edit, and nothing about the locked destinations moved.
 
 **When a round rolls instead of paying.** The pot carries into the next round,
 unpaid, in exactly three cases — all published on the round as `rolled` with a
@@ -245,8 +234,7 @@ The multiplier reweights the split only. It cannot increase the pot.
 Of every unit the game draws from trading fees:
 
 ```
-crew      8000 bps   80%   the winning rocket's holders
-dividend  1300 bps   13%   holder dividend
+crew      9300 bps   93%   the winning rocket's holders
 team       500 bps    5%   operator
 ops        200 bps    2%   gas, RPC, hosting
                     -----
@@ -256,14 +244,14 @@ ops        200 bps    2%   gas, RPC, hosting
 The ops share is a top-up, not a standing fee: it is drawn only while the gas
 wallet sits below a fixed lamport target, and goes to the crew once met.
 
-**Three of those four lines pay the same address.** The vault holds four
-recipient entries, but crew, dividend and ops all pay the distributor — the
+**Two of those three lines pay the same address.** The vault holds three
+recipient entries, but crew and ops both pay the distributor — the
 wallet that pays winners — because the vault permits duplicate recipients and
 that avoids a second operator-controlled key. Only the team share goes
 somewhere else. So what is frozen on chain is:
 
 ```
-9500 bps  the distributor        crew + dividend + ops
+9500 bps  the distributor        crew + ops
  500 bps  BctPqouo…              team
 ```
 
@@ -290,19 +278,17 @@ A round's pot is not simply that 1.5%. Three adjustments, and you need all
 three to reproduce a round:
 
 ```
-free = distributor balance - ops reserve - dividend credited but not yet paid
+free = distributor balance - ops reserve
 draw = round volume * 1.425%
 pot  = clamp(draw + rollover, 5% of free, 30% of free)
 ```
 
 - **1.425%, not 1.5%.** The team's 500 bps never funds a pot, so the rate that
-  reaches crew and dividend is 1.5% scaled by 9500/10000.
+  reaches the crew and the ops reserve is 1.5% scaled by 9500/10000.
 - **The balance is the distributor's, not the fee vault's.** The vault splits
   fees out; the distributor is the wallet holding what the game can pay from.
-- **Money already owed comes off first.** The ops reserve and any dividend
-  credited but not yet swept sit in that same wallet. Sizing a pot against them
-  would pay prizes out of the gas budget or out of what holders are already
-  owed.
+- **Money already owed comes off first.** The ops reserve sits in that same
+  wallet, and sizing a pot against it would pay prizes out of the gas budget.
 - **The rollover is added before the clamp.** A round too small to be worth its
   network fee rolls forward, and that carried amount is part of the next draw.
 - **Why clamp at all.** Fees arrive in batches, not continuously. A flat
