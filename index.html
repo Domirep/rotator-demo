@@ -696,7 +696,12 @@ function applyServer(j){
   // Both are null until the first round has settled -- shown as em-dash
   // rather than inventing a number.
   if(j.vaultUsd!=null) document.getElementById('vault').textContent='$'+Math.round(j.vaultUsd);
-  if(j.lastPotUsd!=null) document.getElementById('pot').textContent='$'+Math.round(j.lastPotUsd);
+  // A real payout is never exactly $0 (MIN_POT_RAW gates it above ~$0.20), so
+  // lastPotUsd===0 unambiguously means the last round rolled over rather than
+  // paid nothing -- say so instead of showing a bare "$0" that reads as broken.
+  if(j.lastPotUsd!=null){
+    document.getElementById('pot').textContent = j.lastPotUsd>0 ? '$'+Math.round(j.lastPotUsd) : T().roundsRolled;
+  }
 
   if(j.settled && !settled){
     settled=true; setTargets();
@@ -1143,19 +1148,7 @@ addrEl.addEventListener('input',function(e){
   if(a){ addrEl.value=a; myAddr=a; }
 })();
 
-/* ---------- demo galaxy board ---------- */
-(async()=>{
-  const demo=['7xKQ...m4Tz','BvXe...9kLp','3Hq2...RtYu','Cw8N...vB1s','FgL5...zQ7m','9ZzA...k3Nn'];
-  const counts=[24180,9640,3175,1290,410,62];
-  const b=document.getElementById('board'); let html='';
-  for(let i=0;i<demo.length;i++){
-    const p=await persona(demo[i]+i);
-    const g=counts[i];
-    html+='<div class="row"><span class="r">'+(i+1)+'</span><span>'+p.name+'</span>'+
-          '<span class="s">'+g.toLocaleString()+'</span><span class="m">'+galaxyMult(g).toFixed(2)+'×</span></div>';
-  }
-  b.innerHTML=html;
-})();
+/* galaxy board render moved below the language section (T() lives there) */
 
 
 
@@ -1166,6 +1159,26 @@ let LANG=(new URLSearchParams(location.search).get('lang')
   ||(navigator.language||'en').slice(0,2));
 if(!LANGS.includes(LANG)) LANG='en';
 const T=()=>window.I18N[LANG];
+
+/* ---------- galaxy board: real leaderboard from the keeper, no placeholders ---------- */
+(async()=>{
+  const b=document.getElementById('board'); if(!b) return;
+  let list=[];
+  try{
+    const j=await (await fetch(API+'/api/leaderboard',{cache:'no-store'})).json();
+    list=j.leaderboard||[];
+  }catch(err){}
+  if(!list.length){ b.innerHTML='<div class="rempty">'+(T().boardEmpty||'')+'</div>'; return; }
+  let html='';
+  for(let i=0;i<list.length;i++){
+    const w=list[i];
+    const p=await persona(w.wallet);
+    html+='<div class="row"><span class="r">'+(i+1)+'</span><span>'+p.name+'</span>'+
+          '<span class="s">'+Number(w.galaxies).toLocaleString()+'</span>'+
+          '<span class="m">'+galaxyMult(w.galaxies).toFixed(2)+'×</span></div>';
+  }
+  b.innerHTML=html;
+})();
 
 function renderHow(){
   const t=T(); const el=document.getElementById('howBody'); if(!el) return;
