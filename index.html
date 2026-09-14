@@ -497,6 +497,13 @@ function applyServer(j){
       'seed sha256(blockhash ‖ '+round+') = '+(seedHex||'').slice(0,48)+'…';
     refreshMe();
   }
+  /* poll() writes this line, but it returns early once the keeper is up, so
+     without this the page would sit on "connecting…" forever. The keeper is
+     sampling Jupiter for us — say so, and show its sample count, since that is
+     what the TWAP is actually computed from. */
+  document.getElementById('feed').textContent =
+    'feed: keeper · Jupiter sampled server-side · '+(j.samples||0)+' samples this launch';
+
   if(j.settled && !settled){
     settled=true; setTargets();
     const w=FIELD.findIndex(f=>f.sym===j.winner);
