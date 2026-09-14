@@ -27,7 +27,7 @@ this file is stale. Report it rather than repeating it.
 | **DIST's MET token account** -- the actual payout balance | `3MVNVyXu4eL183HYcuvd9WfcJ21xy6cwaLFUs4GMunBM` |
 | **DBC pool** (the $GALAXY/MET market) | `rsSz5zq1Mp3jb4fA2QHpjTvJFWnY9r8XxP2RnJdNvs1` |
 | **Pool vault** -- holds ~99% of $GALAXY supply, off-curve, excluded from every round by shape | `FhVo3mqL8PW5pH5U2CN4XE33DokiyZnUwuGpH2hmHLuM` |
-| Keeper (read-only API, this is `{keeper}` everywhere below) | `https://rotator-keeper-production.up.railway.app` |
+| Keeper (read-only API, this is `{keeper}` everywhere below) | `https://rotator-keeper-production.up.railway.app` -- cached ~1s on the hot endpoints, ~60s on settled rounds; origin is Railway |
 | Ember markets API (source for creator-share.js and the daily slate) | `https://embercurve.fun/api/solana/markets` |
 | Solana RPC used in every example below | `https://api.mainnet-beta.solana.com` |
 | Website | `https://galaxymet.pages.dev` |

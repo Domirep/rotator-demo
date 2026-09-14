@@ -2,6 +2,22 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<!-- script-src needs 'unsafe-inline': the whole race is one inline script
+     block, on purpose (no build step, one file to audit). A CSP claiming
+     script-src 'self' here would be lying -- it wouldn't actually block an
+     injected inline script element, so it's not worth the false confidence. The
+     real script-injection defense is escaping every keeper/Jupiter string
+     before it reaches innerHTML (see esc()/safeColor() in the race script),
+     not this header. What this header DOES meaningfully restrict: where the
+     page can fetch/connect to, load styles/fonts from, and that it can't be
+     framed by another site. Honest partial protection beats a policy that
+     looks stricter than it is. -->
+<!-- frame-ancestors is deliberately not here: browsers ignore it entirely
+     when a CSP is delivered via <meta> (console says so, don't ship a
+     directive that's silently a no-op). It's set for real in the top-level
+     `_headers` file instead, which Cloudflare Pages serves as an actual HTTP
+     response header. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://rotator-keeper-production.up.railway.app https://lite-api.jup.ag; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self'; script-src 'self' 'unsafe-inline'; base-uri 'self'; object-src 'none'">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>$GALAXY — ROTATOR</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -444,6 +460,21 @@ let warp=Math.max(0,Math.min(RACE_MS/1000,+(new URLSearchParams(location.search)
 async function sha(s){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));
   return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');}
 const hnum=h=>parseInt(h.slice(0,12),16);
+
+/* ---------- untrusted-string sinks ----------
+   Coin sym/name come from the keeper's slate, which is built from Jupiter
+   token metadata -- and anyone can mint a token with any symbol/name string,
+   including an HTML/script payload, then try to qualify it into the daily
+   pool. Wallet addresses, seeds and blockhashes come from the keeper too. All
+   of it lands in innerHTML somewhere on this page. esc() is the one place
+   that has to be right; every sink below routes through it or safeColor(). */
+const ESC_MAP={'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'};
+const esc=(s)=>String(s??'').replace(/[&<>"']/g,(c)=>ESC_MAP[c]);
+/* A CSS color reaching a style="" attribute unescaped is an XSS vector too
+   (close the quote, open a new attribute) -- validate the shape instead of
+   escaping it, since an escaped-but-malformed value would just break the
+   gradient rather than render one. */
+const safeColor=(c)=>/^#[0-9a-fA-F]{3,8}$/.test(c)?c:'#8A93B2';
 /* independent hex windows - never bit-shift a >32-bit value, it wraps negative */
 const hslice=(h,i)=>parseInt(h.slice(i*6,i*6+6),16);
 const ADJ=['Crimson','Midnight','Gilded','Brass','Feral','Velvet','Iron','Pale','Rowdy','Amber','Hollow','Swift'];
@@ -767,10 +798,11 @@ function buildBay(){
   FIELD.forEach((f,i)=>{
     const el=document.createElement('div');
     el.className='pad';
+    const c=safeColor(f.c);
     el.innerHTML=
       '<div class="tube">'+
         '<div class="well">'+
-          '<div class="fuel" style="background:linear-gradient(180deg,'+f.c+','+f.c+'26)"></div>'+
+          '<div class="fuel" style="background:linear-gradient(180deg,'+c+','+c+'26)"></div>'+
           '<div class="live"></div>'+
           '<div class="deck"></div>'+
         '</div>'+
@@ -778,7 +810,7 @@ function buildBay(){
       '</div>'+
       '<div class="badge"></div>'+
       '<div class="pct flat">+0.00%</div>'+
-      '<div class="who"><b>'+f.sym+'</b><span>'+f.name+'</span></div>';
+      '<div class="who"><b>'+esc(f.sym)+'</b><span>'+esc(f.name)+'</span></div>';
     bay.appendChild(el);
     const cv=el.querySelector('canvas');
     P.push({pad:el, well:el.querySelector('.well'), fuel:el.querySelector('.fuel'),
@@ -804,11 +836,12 @@ function buildLanes(){
   FIELD.forEach((f,i)=>{
     const el=document.createElement('div');
     el.className='lane';
+    const c=safeColor(f.c);
     el.innerHTML=
-      '<div class="lane-head"><b>'+f.sym+'</b><span>'+f.name+'</span></div>'+
+      '<div class="lane-head"><b>'+esc(f.sym)+'</b><span>'+esc(f.name)+'</span></div>'+
       '<div class="lane-track">'+
-        '<div class="lane-trail" style="background:linear-gradient(90deg,'+f.c+'11,'+f.c+')"></div>'+
-        '<div class="lane-rocket" style="border-left-color:'+f.c+'">'+
+        '<div class="lane-trail" style="background:linear-gradient(90deg,'+c+'11,'+c+')"></div>'+
+        '<div class="lane-rocket" style="border-left-color:'+c+'">'+
           '<i class="lane-flame"></i>'+
         '</div>'+
       '</div>'+
@@ -1145,8 +1178,8 @@ function paintRoster(){
     const el=document.createElement('div');
     el.className='rpad'+(d.winner===pad.sym?' win':'')+(myPad===i?' mine':'');
     const head=document.createElement('h4');
-    head.innerHTML='<span style="font-family:inherit;font-size:inherit;color:inherit">'+pad.sym+'</span>'
-      +'<span>'+pad.count+'</span>';
+    head.innerHTML='<span style="font-family:inherit;font-size:inherit;color:inherit">'+esc(pad.sym)+'</span>'
+      +'<span>'+Number(pad.count)+'</span>';
     el.appendChild(head);
     const list=document.createElement('div'); list.className='rlist';
     if(!pad.wallets.length){
@@ -1156,7 +1189,7 @@ function paintRoster(){
     for(const w of pad.wallets){
       const row=document.createElement('div');
       row.className='rw'+(myAddr&&w.address===myAddr?' me-row':'');
-      row.innerHTML='<b>'+w.address.slice(0,4)+'…'+w.address.slice(-4)+'</b>'
+      row.innerHTML='<b>'+esc(w.address.slice(0,4))+'…'+esc(w.address.slice(-4))+'</b>'
         +'<i style="font-style:normal">'+Number(w.balance).toLocaleString()+'</i>';
       row.title=w.address+'  ·  '+w.balance+' $GALAXY  ·  '+w.galaxies+' galaxies';
       list.appendChild(row);
@@ -1303,15 +1336,15 @@ async function renderRounds(force){
       const cls = mv>0 ? 'up' : mv<0 ? 'down' : '';
       const pot = r.rolled
         ? `<span class="rolled">${t.roundsRolled}</span>`
-        : (r.potMet!=null ? `${r.potMet.toFixed(4)} ${r.payoutSymbol||''}` : '-');
-      const title = `seed ${r.seed||''} | blockhash ${r.blockhash||''} | slot ${r.slot||''}`;
+        : (r.potMet!=null ? `${r.potMet.toFixed(4)} ${esc(r.payoutSymbol||'')}` : '-');
+      const title = esc(`seed ${r.seed||''} | blockhash ${r.blockhash||''} | slot ${Number(r.slot)||0}`);
       return `<tr>
-        <td>#${r.round}</td>
-        <td class="rwin">${r.winner ? r.winner.sym : '-'}</td>
+        <td>#${Number(r.round)||0}</td>
+        <td class="rwin">${r.winner ? esc(r.winner.sym) : '-'}</td>
         <td class="${cls}">${mv>=0?'+':''}${mv.toFixed(3)}%</td>
         <td>${pot}</td>
-        <td>${r.crewSize||0}</td>
-        <td class="seed" title="${title}">${(r.seed||'').slice(0,16)}…</td>
+        <td>${Number(r.crewSize)||0}</td>
+        <td class="seed" title="${title}">${esc((r.seed||'').slice(0,16))}…</td>
       </tr>`;
     }).join('');
     const html = body
