@@ -389,9 +389,16 @@ round's seed, holder set, crew list and payout amount is published, the pad
 formula is reproducible, and every payout is a signature you can look up. If a
 round's payouts do not match its published crew and pot, the record says so.
 
-Source of funds: a 3% trade tax on $GALAXY. Meteora takes 20% of that tax, the
-launch platform 30%, the creator 50%. The creator half funds the table above —
-**1.5% of traded volume.**
+Source of funds: a 3% trade tax on $GALAXY. Ember's published split of that
+tax is Meteora 20%, the launch platform 30%, the creator 50% — which would put
+**about 1.5% of traded volume** into the vault.
+
+**Treat that 1.5% as an estimate, not a promise.** It is Ember's number, not
+something we measured, and the keeper uses it only to *size* a pot before
+clamping. What actually bounds every pot is the vault's real balance, which is
+on chain and which you can read yourself — see "How a pot is sized". If Ember's
+split were different from what they publish, the pots would still be drawn from
+the same real money; only the estimate inside the clamp would move.
 
 ## How a pot is sized
 
