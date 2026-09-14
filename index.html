@@ -567,16 +567,18 @@ async function poll(isEntry){
 }
 
 /* ---------- keeper ----------
-   With ?api=<url> (or a saved one) the page becomes a VIEW of the keeper:
-   rounds, seeds, clock and TWAPs all come from the server. Without it, or if
-   the server goes away, it falls back to the local simulation so the page is
-   never blank. The pad formula is identical on both sides, so a player's own
+   With ?api=<url> the page becomes a VIEW of the keeper for that load only
+   (never saved, see the note below): rounds, seeds, clock and TWAPs all come
+   from the server. Without it, or if the server goes away, round data
+   freezes rather than fabricating a fake one -- see the ?sim=1 note at
+   newRound(). The pad formula is identical on both sides, so a player's own
    check agrees with the keeper by construction. */
 /* The keeper. Rounds, seeds and prices come from here, so everyone sees the
    same round rather than a private one rendered in their own browser.
-   ?api= overrides it for local work. If the keeper is unreachable the page
-   falls back to simulating locally and says so in the banner — better a
-   degraded page than a blank one. */
+   ?api= overrides it for local work, for one load, never persisted. If the
+   keeper is unreachable the page freezes round data and says so in the
+   banner -- a fabricated round next to a real token is worse than a paused
+   page. */
 const DEFAULT_API='https://rotator-keeper-production.up.railway.app';
 // ?api= is a dev/review switch, not a player control -- it lets someone
 // point the page at a different keeper for testing (reviewers use this).
@@ -610,7 +612,8 @@ function setFeedBadge(){
   }
   bar.textContent = srvOk
     ? 'LIVE — rounds, seeds and results come from the keeper. '+(srv&&srv.live?'Payouts are real.':'Payouts are simulated.')
-    : 'Keeper unreachable — showing a local simulation.';
+    : (SIM ? 'Keeper unreachable — showing a local simulation (review mode, ?sim=1).'
+           : 'Keeper unreachable — round data paused, nothing fabricated. Live Jupiter prices below are still real.');
   bar.style.borderColor = srvOk ? 'var(--up)' : 'var(--red)';
   bar.style.color = srvOk ? 'var(--up)' : 'var(--red)';
 }
@@ -1370,7 +1373,15 @@ setInterval(checkForUpdate,180000);
 (async()=>{ applyLang(); buildSprites(); buildBay(); buildLanes(); requestAnimationFrame(frame);
   setFeedBadge();
   const connected = await pollServer();
-  if(!connected) await newRound();
+  // Only ever start a fake round (fake blockhash, incrementing LAUNCH #,
+  // dollar pot pulled from a locally-drifting variable) under the explicit
+  // ?sim=1 review switch. Without it, a real $GALAXY holder hitting a
+  // Railway blip must never see a fabricated round and a "$" pot that isn't
+  // DIST sitting next to their real token -- freeze instead: leave round/
+  // seed/pot at their placeholders and let the unreachable badge say so.
+  // poll(false) below still runs and shows real Jupiter prices either way;
+  // it's only the round-level fabrication (newRound) that's gated.
+  if(!connected && SIM) await newRound();
   setInterval(pollServer,POLL_MS);
   setInterval(()=>poll(false),POLL_MS);
   setInterval(clockStep,250); tick(); })();
