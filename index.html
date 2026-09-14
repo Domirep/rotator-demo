@@ -147,6 +147,43 @@ footer{border-top:none;margin-top:10px !important;margin-top:26px;padding:16px 0
   .demo{font-size:11.5px;padding:8px 11px}
 }
 
+/* the checker, promoted above the bay */
+.checkbar{background:var(--felt);border:1px solid var(--line);border-radius:12px;
+  padding:13px 16px;margin:0 0 14px}
+.checkbar.on{border-color:rgba(240,210,138,.55)}
+.checkbar-in{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.checkbar-in label{font-family:"Bebas Neue",Impact,sans-serif;font-size:19px;
+  letter-spacing:.04em;color:var(--gold);white-space:nowrap}
+.checkbar-in input[type=text]{flex:1 1 320px;width:auto}
+.checkbar-in .hint{margin-top:0;flex:0 1 auto}
+.checkbar .me{margin-top:12px;padding-top:11px}
+.checkbar .me .nm{margin-bottom:8px}
+/* The result reads as a row of facts, not a stacked form — it sits above the
+   race now, so it has to stay short enough not to push the rockets down. */
+.mechips{display:flex;gap:10px;flex-wrap:wrap}
+.mechips .kv{border-bottom:none;background:var(--bg);border:1px solid var(--line);
+  border-radius:8px;padding:6px 11px;gap:8px;flex:0 0 auto}
+
+/* who's on board */
+.roster{margin-top:18px}
+.rcount{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--dim);
+  letter-spacing:0;margin-left:8px}
+.roster-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}
+.rpad{background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:10px 11px;min-width:0}
+.rpad.win{border-color:var(--ember)}
+.rpad.mine{border-color:rgba(240,210,138,.55)}
+.rpad h4{margin:0 0 7px;font-family:"Bebas Neue",Impact,sans-serif;font-size:16px;
+  letter-spacing:.03em;color:var(--paper);display:flex;justify-content:space-between;gap:8px}
+.rpad h4 span{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--dim);font-weight:400}
+.rlist{display:flex;flex-direction:column;gap:3px;max-height:190px;overflow-y:auto}
+.rw{display:flex;justify-content:space-between;gap:8px;font-family:"JetBrains Mono",monospace;
+  font-size:10.5px;color:var(--muted);padding:2px 0}
+.rw b{color:var(--paper);font-weight:400}
+.rw.me-row b,.rw.me-row i{color:var(--gold);font-style:normal}
+.rmore{font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--dim);margin-top:5px}
+.rempty{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--dim)}
+@media(max-width:900px){.roster-grid{grid-template-columns:repeat(2,1fr)}}
+
 /* tabs */
 .tabs{display:flex;gap:2px;margin:2px 0 18px;border-bottom:1px solid var(--line)}
 .tab{appearance:none;background:none;border:0;border-bottom:2px solid transparent;
@@ -247,38 +284,51 @@ details code{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--p
     <div class="seedline" id="seed">seed sha256(blockhash &#8214; round) = &#8230;</div>
   </div>
 
+  <!-- The checker sits ABOVE the bay on purpose. It is the only thing most
+       players come here to do, and the people this is built for are on a phone
+       in an in-app browser where anything below the rockets is a scroll away. -->
+  <div class="checkbar" id="checkbar">
+    <div class="checkbar-in">
+      <label for="addr" data-i18n="mePanel">Am I on a pad?</label>
+      <input type="text" id="addr" placeholder="paste any Solana address" spellcheck="false">
+      <span class="hint" data-i18n="meHint">Read-only. No wallet connection, nothing to approve.</span>
+    </div>
+    <div class="me" id="me">
+      <div class="nm" id="menm">&#8212;</div>
+      <div class="mechips">
+        <div class="kv"><span>Your pad</span><b id="mepad">&#8212;</b></div>
+        <div class="kv"><span>Seats</span><b id="meseats">&#8212;</b></div>
+        <div class="kv"><span>Galaxies</span><b id="megalaxies">&#8212;</b></div>
+        <div class="kv"><span>Multiplier</span><b id="memult">&#8212;</b></div>
+      </div>
+      <div class="form" id="meform"></div>
+    </div>
+  </div>
+
   <div class="bay" id="bay"></div>
   <canvas id="sky"></canvas>
+
+  <div class="panel roster" id="rosterPanel">
+    <h3><span data-i18n="roster">Who's on board</span> <span class="rcount" id="rcount"></span></h3>
+    <div class="note" style="margin-top:0"><span data-i18n="rosterNote">Every eligible wallet in this launch and the pad it drew. Anyone can recompute it.</span> <span class="mono">sha256(address | seed) mod 8</span></div>
+    <div class="roster-grid" id="roster"></div>
+  </div>
 
   <div class="cols">
     <div>
       <div class="panel">
-        <h3>Galaxy board</h3>
+        <h3 data-i18n="board">Galaxy board</h3>
         <div class="board" id="board"></div>
-        <div class="note">Every win is a galaxy reached. The count climbs for as long as you hold &mdash; selling banks the winnings and sends you back to zero.</div>
+        <div class="note" data-i18n="boardNote">Every win is a galaxy reached. The count climbs for as long as you hold &mdash; selling banks the winnings and sends you back to zero.</div>
       </div>
     </div>
 
     <div>
       <div class="panel">
-        <h3>Am I on a pad?</h3>
-        <input type="text" id="addr" placeholder="paste any Solana address" spellcheck="false">
-        <div class="hint">Read-only. No wallet connection, nothing to approve.</div>
-        <div class="me" id="me">
-          <div class="nm" id="menm">&#8212;</div>
-          <div class="kv"><span>Your pad</span><b id="mepad">&#8212;</b></div>
-          <div class="kv"><span>Seats</span><b id="meseats">&#8212;</b></div>
-          <div class="kv"><span>Galaxies</span><b id="megalaxies">&#8212;</b></div>
-          <div class="kv"><span>Multiplier</span><b id="memult">&#8212;</b></div>
-          <div class="form" id="meform"></div>
-        </div>
-      </div>
-
-      <div class="panel" style="margin-top:18px">
-        <h3>How the fuel fills</h3>
-        <p><b style="color:var(--paper)">Fuel</b> &mdash; the time-weighted average of the coin's move since the gate. 90 samples a launch. One green candle can't fill a tank.</p>
-        <p><b style="color:var(--paper)">Dashed line</b> &mdash; the price this second. Above the fuel it's pouring in, below it's draining.</p>
-        <p><b style="color:var(--paper)">T-0</b> &mdash; fullest tank lifts off. Everyone else is scrubbed.</p>
+        <h3 data-i18n="fuelPanel">How the fuel fills</h3>
+        <p data-i18n-html="fuel1"><b style="color:var(--paper)">Fuel</b> &mdash; the time-weighted average of the coin's move since the gate. 90 samples a launch. One green candle can't fill a tank.</p>
+        <p data-i18n-html="fuel2"><b style="color:var(--paper)">Dashed line</b> &mdash; the price this second. Above the fuel it's pouring in, below it's draining.</p>
+        <p data-i18n-html="fuel3"><b style="color:var(--paper)">T-0</b> &mdash; fullest tank lifts off. Everyone else is scrubbed.</p>
         <p id="feed" class="mono" style="font-size:11.5px;color:var(--dim)">feed: connecting&#8230;</p>
       </div>
     </div>
@@ -496,6 +546,7 @@ function applyServer(j){
     document.getElementById('seed').textContent=
       'seed sha256(blockhash | '+round+') = '+(seedHex||'').slice(0,48)+'…';
     refreshMe();
+    loadRoster();
   }
   /* poll() writes this line, but it returns early once the keeper is up, so
      without this the page would sit on "connecting…" forever. The keeper is
@@ -521,7 +572,7 @@ async function pollServer(){
     if(!r.ok) throw new Error('HTTP '+r.status);
     applyServer(await r.json());
     srvFails=0;
-    if(!srvOk){ srvOk=true; setFeedBadge(); }
+    if(!srvOk){ srvOk=true; setFeedBadge(); loadRoster(); }
     return true;
   }catch(e){
     if(++srvFails>2 && srvOk){ srvOk=false; srvPct=null; srvLive=null; setFeedBadge(); }
@@ -789,7 +840,8 @@ function galaxyMult(g){ for(const [t,m] of GALAXY_LADDER) if(g>=t) return m; ret
 /* ---------- the address box ---------- */
 let myPad=-1, myAddr='';
 async function refreshMe(){
-  if(!myAddr||myAddr.length<32){document.getElementById('me').classList.remove('on');myPad=-1;return;}
+  if(!myAddr||myAddr.length<32){document.getElementById('me').classList.remove('on');
+    document.getElementById('checkbar').classList.remove('on');myPad=-1;paintRoster();return;}
   const p=await persona(myAddr);
   const h=await sha(myAddr+'|'+seedHex);
   myPad=hnum(h)%FIELD.length;
@@ -804,7 +856,70 @@ async function refreshMe(){
   for(let i=0;i<10;i++){const w=(parseInt(p.h.slice(i*3,i*3+3),16)%10)<5;
     const e=document.createElement('i'); e.className=w?'w':'l'; e.textContent=w?'W':'L'; f.appendChild(e);}
   document.getElementById('me').classList.add('on');
+  document.getElementById('checkbar').classList.add('on');
   setTargets();
+  paintRoster();
+}
+
+/* ---------- who's on board ----------
+   The crews come from the keeper, but the assignment is not something you have
+   to take from us: pad = sha256(address | seed) mod 8 over the holders at the
+   round's slot, and the seed is published. This view just saves everyone
+   running getProgramAccounts themselves. */
+let rosterData=null, rosterRound=-1;
+
+async function loadRoster(){
+  if(!srvOk||!API) { rosterData=null; paintRoster(); return; }
+  try{
+    const r=await fetch(API+'/api/round/crews?per=60',{cache:'no-store'});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    rosterData=await r.json(); rosterRound=rosterData.round;
+  }catch(e){ rosterData=null; }
+  paintRoster();
+}
+
+function paintRoster(){
+  const grid=document.getElementById('roster'), count=document.getElementById('rcount');
+  if(!grid) return;
+  const T=(I18N&&I18N[LANG])||{};
+  if(!rosterData){
+    count.textContent='';
+    grid.innerHTML='<div class="rempty"></div>';
+    grid.firstChild.textContent=T.rosterEmpty||'';
+    return;
+  }
+  const d=rosterData;
+  count.textContent=d.assigned+' '+(T.rosterWallets||'wallets across 8 pads')
+    +(d.eligible!==d.assigned?(' · '+d.eligible+' '+(T.rosterEligible||'eligible')):'');
+  grid.innerHTML='';
+  d.pads.forEach((pad,i)=>{
+    const el=document.createElement('div');
+    el.className='rpad'+(d.winner===pad.sym?' win':'')+(myPad===i?' mine':'');
+    const head=document.createElement('h4');
+    head.innerHTML='<span style="font-family:inherit;font-size:inherit;color:inherit">'+pad.sym+'</span>'
+      +'<span>'+pad.count+'</span>';
+    el.appendChild(head);
+    const list=document.createElement('div'); list.className='rlist';
+    if(!pad.wallets.length){
+      const e=document.createElement('div'); e.className='rempty'; e.textContent=T.rosterEmptyPad||'empty pad';
+      list.appendChild(e);
+    }
+    for(const w of pad.wallets){
+      const row=document.createElement('div');
+      row.className='rw'+(myAddr&&w.address===myAddr?' me-row':'');
+      row.innerHTML='<b>'+w.address.slice(0,4)+'…'+w.address.slice(-4)+'</b>'
+        +'<i style="font-style:normal">'+Number(w.balance).toLocaleString()+'</i>';
+      row.title=w.address+'  ·  '+w.balance+' $GALAXY  ·  '+w.galaxies+' galaxies';
+      list.appendChild(row);
+    }
+    el.appendChild(list);
+    if(pad.truncated>0){
+      const m=document.createElement('div'); m.className='rmore';
+      m.textContent='+ '+pad.truncated+' '+(T.rosterMore||'more');
+      el.appendChild(m);
+    }
+    grid.appendChild(el);
+  });
 }
 /* The address is only ever typed or pasted — there is no wallet to connect, and
    most players arrive through an in-app browser where there would be nothing to
@@ -878,19 +993,23 @@ function applyLang(code){
   if(vs[0]) vs[0].textContent=t.vault.vault;
   if(vs[1]) vs[1].textContent=t.vault.pot;
   if(vs[2]) vs[2].textContent=t.vault.cadence;
-  const h3=document.querySelectorAll('#tab-race .panel h3');
-  if(h3[0]) h3[0].textContent=t.board;
-  if(h3[1]) h3[1].textContent=t.mePanel;
-  if(h3[2]) h3[2].textContent=t.fuelPanel;
-  set('#tab-race .note',t.boardNote);
+  /* Bound by KEY, not by position. These used to be h3[0], h3[1], h3[2] into
+     "#tab-race .panel h3" — so inserting one panel silently relabelled every
+     other one, and the first .note in the tab swallowed the board's text. A
+     layout change should never be able to rename the wrong heading. */
+  document.querySelectorAll('[data-i18n]').forEach(n=>{
+    const v=t[n.dataset.i18n];
+    if(typeof v==='string') n.textContent=v;
+  });
+  document.querySelectorAll('[data-i18n-html]').forEach(n=>{
+    const v=t[n.dataset.i18nHtml];
+    if(typeof v==='string') n.innerHTML=v;
+  });
   const addr=document.getElementById('addr'); if(addr) addr.placeholder=t.mePlaceholder;
-  set('#tab-race .hint',t.meHint);
   const kv=document.querySelectorAll('#me .kv span');
   const kvs=[t.kv.pad,t.kv.seats,t.kv.galaxies,t.kv.mult];
   kv.forEach((n,i)=>{ if(kvs[i]) n.textContent=kvs[i]; });
-  const fp=document.querySelectorAll('#tab-race .panel')[2];
-  if(fp){ const ps=fp.querySelectorAll('p');
-    if(ps[0]) ps[0].innerHTML=t.fuel1; if(ps[1]) ps[1].innerHTML=t.fuel2; if(ps[2]) ps[2].innerHTML=t.fuel3; }
+  paintRoster();
   set('footer',t.footer);
   renderHow(); renderFaq();
   if(document.getElementById('tab-rounds') && !document.getElementById('tab-rounds').hidden) renderRounds(true);
