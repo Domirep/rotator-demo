@@ -504,13 +504,46 @@ pot  = clamp(draw + rollover, 5% of free, 30% of free)
   fees out; the distributor is the wallet holding what the game can pay from.
 - **Money already owed comes off first.** The ops reserve sits in that same
   wallet, and sizing a pot against it would pay prizes out of the gas budget.
-- **The rollover is added before the clamp.** A round too small to be worth its
-  network fee rolls forward, and that carried amount is part of the next draw.
+- **The rollover is added before the clamp.** A round whose pot has not
+  reached the 1 MET floor rolls forward (not a network-fee thing -- gas is a
+  few cents, the floor is a fixed 1 MET), and that carried amount is part of
+  the next draw.
 - **Why clamp at all.** Fees arrive in batches, not continuously. A flat
   percentage would make the first round after a batch worth several times the
   last one, for a reason invisible to whoever is playing it. The floor keeps
   thin rounds worth entering; the ceiling stops one round draining what later
   rounds need.
+
+**Where the distributor's current balance actually came from, right now: not
+$GALAXY fees.** Trace it and say so plainly rather than let "the distributor
+holds what the game pays from" imply tax income that hasn't arrived. On
+chain, oldest first:
+
+```
+2026-09-14T00:47:05Z  TEAM -> DIST        8.958796 MET   27nXmMVDQzqCpztJAWxoAHgdHU6vijiADh4aeNxzSjzNmtaUbsXWag8cdSncFDjGG1oJRKsSF6AEb4R9vWV4bFFj
+                      (5.5h BEFORE $GALAXY existed -- createdAt 06:19:15Z. A team seed, not a fee claim.)
+2026-09-14T00:47:34Z  DIST -> 9 wallets  ~4.521296 MET   57583urbFsXe3mp45vfZ3q6KSqGGxitw5d76aEWg3rCHqk13WXDPZdmxuMoeyykpMzgKz51G46PkhkZ8ia9X84Sw
+                      34FbSMeqECia9bDq1eYYx7VVDLxLFYsLXYMdV8eAAd8eVtpJMKy34KcdGC8ApCEE9im1ZXcv2B4z8jRWR6aiSbue
+                      29 seconds after the seed transfer, before $GALAXY existed. Pre-launch payout
+                      tests. None of those 9 wallets are in the current eligible crew. NOT a round --
+                      no seed, no pad, no /api/round record for either signature.
+2026-09-14T15:56:50Z  DIST -> DkfpRYQy…  1.303272 MET   ZhCY6xobYKjiQVvcXihBxzJD7UVtykTRT3WWLSTUa9PyRFWgtCiDpnqp8uR7G6irA4fuyv8WfeT4oE6eNvj4DLR
+                      Round 9941118. The only real game round that has ever paid.
+```
+
+8.958796 − 4.521296 − 1.303272 ≈ 3.134228, close to (not exactly, the
+9-wallet amounts above are rounded) the distributor's actual current balance
+of 3.134392 MET -- read it yourself, it moves. No `fund_by_claiming_fee`
+inflow sits between any of these -- Ember's own API confirms it: `paidUsd: 0`
+for this
+mint, meaning the creator (the vault) has not received a single dollar of
+$GALAXY's 3% tax yet. **Every MET this game has ever paid or could pay right
+now is the pre-launch team seed, not trading-fee income.** The settlement
+mechanism is real and works exactly as described above; the fuel behind it,
+today, is not what the "money split" section might imply on a first read.
+This will stop being true the moment `fund_by_claiming_fee` actually lands
+real fees -- check the distributor's inflows, not this sentence's age, to
+know if it still holds.
 
 With no price or volume data for a round, the draw is zero and the pot is the
 floor. A round is never sized on a number we chose after seeing the seed.
