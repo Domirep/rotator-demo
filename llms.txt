@@ -271,6 +271,16 @@ against `entry` and it must equal `twapPct`. Before this was added, `samples`
 was a bare count and the TWAP was not independently recomputable -- a real
 gap, not a rounding note.
 
+**This did not retroactively add data that was never captured.** Rounds
+settled before this shipped -- including round **9941118**, the game's first
+real MET payout -- have `field[]` entries with `sym`, `mint` and `twapPct`
+only; `t`/`p` are absent because nothing recorded them at the time, not
+because they're being withheld. There is no way to recompute TWAP for those
+rounds, or for the in-flight current round before it settles
+(`/api/round/current` also has no `t`/`p` -- the arrays are written once at
+settle, not streamed live). "For each round" means each round since this
+shipped. Check a round's own `field[].t` before assuming it has one.
+
 **1. The seed was not chosen by us**
 
 ```
@@ -436,8 +446,10 @@ actually traded, divided by that token's own fee. Nine independent tokens land
 within one point of **79.9%**. Readings below that are claim lag, which drags a
 reading down and never up, so the cluster is the floor.
 
-Anyone can redo it from Ember's public API; the keeper ships the script that
-does (`scripts/creator-share.js`).
+Anyone can redo it from Ember's public API. `scripts/creator-share.js` in
+**this** (public, `rotator-demo`) repo does it standalone -- it doesn't need
+the private keeper, just Ember's public `/markets` endpoint. Run it yourself;
+it reproduces the 79.9% cluster and the 2.40%-of-volume figure above.
 
 **It is still only an estimate for sizing.** The keeper uses this rate to size a
 pot before clamping it, and what actually bounds every pot is the vault's real

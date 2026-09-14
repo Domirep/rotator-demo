@@ -1365,8 +1365,9 @@ setInterval(checkForUpdate,180000);
   "roundOutcomeVerifiable": true,
   "padAssignmentVerifiable": true,
   "splitEnforcedByCode": false,
-  "destinationsImmutable": true,
-  "reason": "the fee vault exists and transfer_pool_creator has run: the recipient list is fixed on chain, no setter exists. The 93/5/2 split of the distributor's own share is keeper policy, not chain-enforced -- check it round by round against published payouts. Meteora (not us) can still upgrade the vault program."
+  "vaultRecipientListFixed": true,
+  "vaultProgramUpgradeable": true,
+  "reason": "the fee vault's recipient list has no setter in the program's current instruction set -- transfer_pool_creator has run, so the current recipients are fixed as far as this program can change them. That is NOT the same as immutable: Meteora holds the program's upgrade authority and could ship a version that adds one. The 93/5/2 split of the distributor's own share is keeper policy, not chain-enforced -- check it round by round against published payouts."
  },
  "addresses": {
   "galaxyMint": "9n3AqW2xLVqh5qyMzaztZqKbgN4uudXgGTfbANoWv4bF",
