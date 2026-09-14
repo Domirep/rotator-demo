@@ -27,7 +27,9 @@
 import fs from 'node:fs';
 
 const RPC = process.env.RPC_URL || 'https://api.mainnet-beta.solana.com';
-const FILE = 'llms.txt';
+// Overridable ONLY so the gate itself can be tested against a real fee vault
+// before launch day. Production always checks the real file.
+const FILE = process.env.LLMS_FILE || 'llms.txt';
 const UPGRADEABLE_LOADER = 'BPFLoaderUpgradeab1e11111111111111111111111';
 const DFS_PROGRAM = 'dfsdo2UqvwfN8DuUVrMRNfQe11VaiNoKcMqLHVvDPzh';
 
@@ -111,9 +113,18 @@ if (claimsLocked && !placeholders.length) {
     fail.push('llms.txt claims destinations are locked but names no fee vault');
   } else {
     try {
-      const acct = await rpc('getAccountInfo', [vaultId, { encoding: 'base64' }]);
+      // Deliberately the strictest commitment: a launch gate should not pass on
+      // state that could still be rolled back. But a vault created minutes ago
+      // is not yet finalized, and "does not exist" is a frightening and wrong
+      // way to say "wait thirty seconds" — so distinguish the two.
+      const acct = await rpc('getAccountInfo', [vaultId, { encoding: 'base64', commitment: 'finalized' }]);
       if (!acct?.value) {
-        fail.push(`fee vault ${vaultId} does not exist on chain, but llms.txt says destinations are locked`);
+        const soon = await rpc('getAccountInfo', [vaultId, { encoding: 'base64', commitment: 'confirmed' }]);
+        if (soon?.value) {
+          fail.push(`fee vault ${vaultId} exists but is not finalized yet — wait ~30s and run again`);
+        } else {
+          fail.push(`fee vault ${vaultId} does not exist on chain, but llms.txt says destinations are locked`);
+        }
       } else if (acct.value.owner !== DFS_PROGRAM) {
         fail.push(`fee vault ${vaultId} is owned by ${acct.value.owner}, not the Dynamic Fee Sharing program`);
       } else {
