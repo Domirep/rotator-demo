@@ -350,7 +350,10 @@ details code{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--p
 
 <script src="i18n.js"></script>
 <script>
-/* ---------- the eight real coins ---------- */
+/* ---------- the eight coins ----------
+   These are the FALLBACK only. The racing field is drawn daily by the keeper
+   and arrives on /api/round; adoptField() swaps to it. This list is what the
+   page shows with no keeper reachable, so the demo still runs standalone. */
 const FIELD=[
  {sym:'PUMP',    name:'Pump.fun',  mint:'pumpCmXqMfrsAkQ5r49WcJnRayYRqmXz6ae8H7H9Dfn', c:'#6FD08C'},
  {sym:'BONK',    name:'Bonk',      mint:'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263', c:'#E8B54A'},
@@ -527,8 +530,41 @@ function resetRoundVisuals(){
   shownF=FIELD.map(()=>0); shownL=FIELD.map(()=>0); shownP=FIELD.map(()=>0);
 }
 
+/* A coin drawn today may be one nobody has picked a colour for, so colours are
+   deterministic from the mint: same coin, same colour, on every machine, with
+   no lookup table to maintain. Hex, because palette() mixes hex. */
+const HUES=['#6FD08C','#E8B54A','#C98CE0','#FF7A3D','#7FB4E8','#8FD04F','#E0C15E','#E06B8B',
+            '#5FD3C4','#D98BE0','#9BE06B','#E89A4A','#6FA8E0','#D0708C','#B4E05F','#8C8CE0'];
+const KNOWN={};
+for(const f of FIELD) KNOWN[f.mint]=f.c;
+function colourFor(mint){
+  if(KNOWN[mint]) return KNOWN[mint];
+  let h=0; for(let i=0;i<mint.length;i++) h=(h*31+mint.charCodeAt(i))>>>0;
+  return HUES[h%HUES.length];
+}
+
+/* Adopt the keeper's field. Returns true if anything changed.
+
+   The length check is not defensive noise: myPad is hnum % FIELD.length, so a
+   field of the wrong size would silently reassign every wallet to a different
+   pad than the keeper assigned. Better to keep racing the old one. */
+function adoptField(list){
+  if(!Array.isArray(list) || list.length!==FIELD.length) return false;
+  if(list.every((f,i)=>f.mint===FIELD[i].mint)) return false;
+  FIELD.length=0;
+  for(const f of list) FIELD.push({sym:f.sym, name:f.name||f.sym, mint:f.mint, c:colourFor(f.mint)});
+  SPR.length=0; buildSprites();
+  P.length=0; buildBay();
+  shownF=FIELD.map(()=>0); targetF=FIELD.map(()=>0);
+  shownL=FIELD.map(()=>0); targetL=FIELD.map(()=>0);
+  shownP=FIELD.map(()=>0); targetP=FIELD.map(()=>0);
+  samples={}; entry={};
+  return true;
+}
+
 function applyServer(j){
   srv=j;
+  adoptField(j.field);
   const bySym={}; for(const f of j.field||[]) bySym[f.sym]=f;
   srvPct = FIELD.map(f=> bySym[f.sym] ? (Number(bySym[f.sym].twapPct)||0) : 0);
   srvLive = FIELD.map(f=>{
@@ -536,7 +572,9 @@ function applyServer(j){
     if(!e||!e.entryPrice||!e.livePrice) return 0;
     return ((e.livePrice-e.entryPrice)/e.entryPrice)*100;
   });
-  raceMs = j.roundMs || RACE_MS;
+  // raceMs is the RACING window, which is shorter than the round: the last
+  // gapMs is settled time, held for the launch animation.
+  raceMs = j.raceMs || j.roundMs || RACE_MS;
   tStart = j.startedAt;
 
   if(j.round!==round){
