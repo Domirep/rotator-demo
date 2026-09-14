@@ -537,10 +537,34 @@ const HUES=['#6FD08C','#E8B54A','#C98CE0','#FF7A3D','#7FB4E8','#8FD04F','#E0C15E
             '#5FD3C4','#D98BE0','#9BE06B','#E89A4A','#6FA8E0','#D0708C','#B4E05F','#8C8CE0'];
 const KNOWN={};
 for(const f of FIELD) KNOWN[f.mint]=f.c;
-function colourFor(mint){
-  if(KNOWN[mint]) return KNOWN[mint];
-  let h=0; for(let i=0;i<mint.length;i++) h=(h*31+mint.charCodeAt(i))>>>0;
-  return HUES[h%HUES.length];
+/* FNV-1a with an avalanche. The obvious h*31 is wrong here: 31 is -1 mod 16,
+   so against a 16-colour palette the index collapses to an alternating sum of
+   the characters and similar mints all land on the same colour. */
+function hueIndex(mint){
+  let h=2166136261;
+  for(let i=0;i<mint.length;i++){ h^=mint.charCodeAt(i); h=Math.imul(h,16777619); }
+  h^=h>>>16; h>>>=0;
+  return h%HUES.length;
+}
+
+/* Colour the whole field at once, not one coin at a time.
+
+   Hashing each mint independently is well distributed, which is exactly why it
+   does not work: 8 rockets drawn from 16 colours collide about 87% of the time
+   (the birthday bound), and two identical rockets in a race the player has to
+   read is worse than a coin changing colour between days. So each coin starts
+   at its hashed colour and takes the next free one if that is taken. Still
+   deterministic from the field, still stable all day, never a duplicate. */
+function colourField(list){
+  const used=new Set(), out=[];
+  for(const f of list){
+    const fixed=KNOWN[f.mint];
+    if(fixed && !used.has(fixed)){ used.add(fixed); out.push(fixed); continue; }
+    let i=hueIndex(f.mint);
+    for(let n=0;n<HUES.length && used.has(HUES[i]);n++) i=(i+1)%HUES.length;
+    used.add(HUES[i]); out.push(HUES[i]);
+  }
+  return out;
 }
 
 /* Adopt the keeper's field. Returns true if anything changed.
@@ -552,7 +576,8 @@ function adoptField(list){
   if(!Array.isArray(list) || list.length!==FIELD.length) return false;
   if(list.every((f,i)=>f.mint===FIELD[i].mint)) return false;
   FIELD.length=0;
-  for(const f of list) FIELD.push({sym:f.sym, name:f.name||f.sym, mint:f.mint, c:colourFor(f.mint)});
+  const cols=colourField(list);
+  list.forEach((f,i)=>FIELD.push({sym:f.sym, name:f.name||f.sym, mint:f.mint, c:cols[i]}));
   SPR.length=0; buildSprites();
   P.length=0; buildBay();
   shownF=FIELD.map(()=>0); targetF=FIELD.map(()=>0);
