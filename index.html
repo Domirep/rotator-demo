@@ -20,6 +20,13 @@
   --gold:#F0D28A; --up:#4FD39B; --red:#E0768A; --ember:#FBC7A9;
   --arm:#482a48; --core:#FDFCF9;
 }
+#updateBar{position:fixed;left:0;right:0;bottom:0;z-index:999;display:none;
+  justify-content:center;align-items:center;gap:10px;padding:10px 14px;
+  background:var(--well2);border-top:1px solid var(--line);color:var(--paper);
+  font-size:13px}
+#updateBar b{color:var(--gold)}
+#updateBar button{background:var(--up);color:var(--bg);border:0;border-radius:7px;
+  padding:6px 14px;font-weight:700;font-size:13px;cursor:pointer}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--paper);
   font-family:"Inter",system-ui,sans-serif;font-size:15px;-webkit-font-smoothing:antialiased}
@@ -253,12 +260,15 @@ details code{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--p
 </head>
 <body>
 
+<div id="updateBar"><b>New version available</b><span>&mdash; refresh to get it</span>
+  <button id="updateBtn" type="button">Refresh</button></div>
+
 <header><div class="hd">
   <h1>ROTATOR</h1>
   <div class="tag">Eight real memecoins. Three minutes.<br>You're <b>assigned</b> a pad. Hold to ride.</div>
   <div class="vault">
-    <div><span>Vault</span><b class="v-gold" id="vault">$412</b></div>
-    <div><span>This pot</span><b class="v-up" id="pot">$33</b></div>
+    <div><span>Vault</span><b class="v-gold" id="vault">—</b></div>
+    <div><span>This pot</span><b class="v-up" id="pot">—</b></div>
     <div><span>Cadence</span><b id="cad">3m</b></div>
   </div>
 </div></header>
@@ -617,6 +627,12 @@ function applyServer(j){
      what the TWAP is actually computed from. */
   document.getElementById('feed').textContent =
     'feed: keeper · Jupiter sampled server-side · '+(j.samples||0)+' samples this launch';
+
+  // Real numbers from the keeper, not the offline demo's simulated walk.
+  // Both are null until the first round has settled -- shown as em-dash
+  // rather than inventing a number.
+  if(j.vaultUsd!=null) document.getElementById('vault').textContent='$'+Math.round(j.vaultUsd);
+  if(j.lastPotUsd!=null) document.getElementById('pot').textContent='$'+Math.round(j.lastPotUsd);
 
   if(j.settled && !settled){
     settled=true; setTargets();
@@ -1140,6 +1156,34 @@ document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>{
   history.replaceState(null,'',b.dataset.tab==='race'?location.pathname+location.search:'#'+b.dataset.tab);
 }));
 if(location.hash){ const t=location.hash.slice(1); if(PANES.includes(t)) showTab(t); }
+
+/* ---------- update checker ----------
+   Cloudflare Pages doesn't surface a usable ETag on index.html itself (only
+   on static assets like i18n.js, which don't necessarily change on every
+   deploy), so this just re-fetches the page fresh and hashes it. No deploy-
+   time step to remember, works for any future change, self-contained. Checked
+   every 3 minutes -- about a round length, not on every 2s poll tick. */
+async function pageHash(){
+  const html = await fetch('/',{cache:'no-store'}).then(r=>r.text());
+  const bytes = new TextEncoder().encode(html);
+  const digest = await crypto.subtle.digest('SHA-256',bytes);
+  return [...new Uint8Array(digest)].map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+let baselineHash=null, updateShown=false;
+async function checkForUpdate(){
+  if(updateShown) return;
+  try{
+    const h=await pageHash();
+    if(baselineHash===null){ baselineHash=h; return; }
+    if(h!==baselineHash){
+      updateShown=true;
+      document.getElementById('updateBar').style.display='flex';
+    }
+  }catch(e){ /* offline or blocked -- just try again next interval */ }
+}
+document.getElementById('updateBtn').addEventListener('click',()=>location.reload());
+checkForUpdate();
+setInterval(checkForUpdate,180000);
 
 /* ---------- go ---------- */
 (async()=>{ applyLang(); buildSprites(); buildBay(); requestAnimationFrame(frame);
