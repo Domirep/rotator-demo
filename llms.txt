@@ -403,6 +403,18 @@ Multiplier ladder, by cumulative wins since the wallet last reduced its balance:
 
 The multiplier reweights the split only. It cannot increase the pot.
 
+**"A win" means a round that actually paid, not landing on the winning
+pad.** A rolled round (pot below 1 MET, an empty pad, no price data, or not
+enough gas) does not credit a streak, even for a wallet that was on the
+winning pad that round -- otherwise a streak (and the real payout share it
+buys via the ladder above) could be farmed for free across many rolled
+rounds and cashed in at 4.7x the moment a pot finally clears. Verified
+directly: round 9941136 rolled with two wallets on its winning pad, and
+neither wallet's streak moved. `GET /api/leaderboard` currently shows two
+entries with a nonzero streak from *before* this was enforced (one has 2
+wins and $0 paid) -- that's disclosed history from launch day, not a live
+exploit; no wallet's streak has grown on a rolled round since.
+
 ---
 
 ## Money split
