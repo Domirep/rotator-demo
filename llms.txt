@@ -20,7 +20,7 @@ this file is stale. Report it rather than repeating it.
 |---|---|
 | $GALAXY mint | `__GALAXY_MINT__` |
 | Payout token (MET) | `METvsvVRapdj9cFLzq4Tr43xK4tAjQfwX76z3n6mWQL` |
-| Fee vault | `__FEE_VAULT__` |
+| Fee vault | `4nKyrntTRvPv1LQyBGsWnngywz3DUKpse9dPEofVUV3P` |
 | Meteora Dynamic Fee Sharing | `dfsdo2UqvwfN8DuUVrMRNfQe11VaiNoKcMqLHVvDPzh` |
 | Team wallet (5%) | `BctPqouosqBE9LdN2ha6kvMmagHTrscVGoJvWW7XqYfN` |
 | Website | `https://galaxymet.pages.dev` |
@@ -148,7 +148,7 @@ source    github.com/MeteoraAg/dynamic-fee-sharing
 **1. The recipients are in the account, not in our config.**
 
 ```
-getAccount(__FEE_VAULT__)   -> owner MUST be dfsdo2UqvwfN8DuUVrMRNfQe11VaiNoKcMqLHVvDPzh
+getAccount(4nKyrntTRvPv1LQyBGsWnngywz3DUKpse9dPEofVUV3P)   -> owner MUST be dfsdo2UqvwfN8DuUVrMRNfQe11VaiNoKcMqLHVvDPzh
 ```
 
 Decode it. After the 8-byte Anchor discriminator the layout is `owner`,
