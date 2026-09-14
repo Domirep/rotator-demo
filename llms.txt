@@ -261,6 +261,19 @@ an on-chain signature anyone can look up, and the pad formula is reproducible
 from published values. If a round's payouts do not match its published crew and
 pot, that is visible without our source.
 
+**"Its crew" means the actual wallet list, published since round 9941155.**
+Before that, `/api/round/crews` took no `round` parameter at all and always
+returned whichever round was still live -- a verifier following `?round=N`
+into the past silently got today's roster back, not N's. That was a real
+gap, not a rounding note: the game's first real payout (round 9941118) could
+be checked for a *signature* and a *count*, but not for *who* should have
+received it. Fixed: `GET {keeper}/api/round/crews?round=N` now returns N's
+own persisted crew or a 404 naming the gap, never a substitute; `GET
+{keeper}/api/round/{n}` embeds the same crew as `pads[]` directly in the
+round record. Rounds before 9941155 -- including 9941118 -- were never
+persisted and cannot be reconstructed after the fact; both endpoints say so
+rather than backfill a guess from a later snapshot.
+
 ## How to verify a round without trusting us
 
 Rounds are aligned to the wall clock:
@@ -273,7 +286,9 @@ round_closes = round_start + 180000       the next round opens exactly here
 ```
 
 For each round we publish `blockhash`, `slot`, `seed`, every price sample, the
-full crew list and every payout amount. The price samples: `GET
+full crew list and every payout amount -- the crew list since round 9941155,
+the price samples since round 9941125 (see "its crew" and the samples note
+below for both exceptions). The price samples: `GET
 {keeper}/api/round/{n}` returns `field[]`, and each entry carries `t` and `p`
 -- parallel arrays of sample timestamp (unix ms) and price, one pair per poll
 tick, alongside `entry` (the first sample) and `twapPct` (the mean of `p`
@@ -452,8 +467,9 @@ wallet — nothing in a fee vault can compel whoever holds the crew share to han
 it to winners.
 
 What makes the crew share checkable is not the vault, it is publication: every
-round's seed, holder set, crew list and payout amount is published, the pad
-formula is reproducible, and every payout is a signature you can look up. If a
+round's seed, holder set, crew list (since round 9941155 -- see "its crew"
+above) and payout amount is published, the pad formula is reproducible, and
+every payout is a signature you can look up. If a
 round's payouts do not match its published crew and pot, the record says so.
 
 Source of funds: a **3% trade tax** on $GALAXY. About **80% of that reaches
