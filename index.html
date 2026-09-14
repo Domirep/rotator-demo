@@ -132,10 +132,14 @@ footer{border-top:none;margin-top:10px !important;margin-top:26px;padding:16px 0
 @media(max-width:900px){.cols{grid-template-columns:1fr}.tube{height:230px}}
 
 /* Phones. Most players arrive through an in-app browser (FOMO), so this is the
-   common case, not the edge case. All eight pads stay in one line, same as
-   desktop — it is a race, and wrapping it into rows breaks that. Below
-   ~640px eight columns can't fit at a legible width, so the row scrolls
-   horizontally instead of shrinking pads into something unreadable. */
+   common case, not the edge case. Eight columns can't fit a phone at a
+   legible width -- scrolling sideways to see the whole field defeats the
+   point of a race. A leaderboard of stacked rows fits all eight without any
+   scroll, at full legible size, using the exact same tube: it is still a
+   real vertical fuel tank with the same rocket climbing in it, just laid out
+   sideways in the row and shrunk to icon size instead of column size. Reuses
+   every pixel of the existing canvas/fuel/flame code untouched -- only the
+   layout around it changes. */
 @media(max-width:560px){
   .wrap{padding:0 14px}
   .hd{padding:14px;gap:10px}
@@ -146,12 +150,17 @@ footer{border-top:none;margin-top:10px !important;margin-top:26px;padding:16px 0
   .racebar{gap:10px;padding:12px 0 8px}
   .racebar h2{font-size:22px}
   .clock{font-size:24px}
-  .bay{padding:12px 10px 10px;gap:6px}
-  .tube{height:150px}
-  .pct{font-size:11.5px}
-  .who b{font-size:11px}
-  .who span{font-size:9px}
-  .badge{font-size:8.5px}
+  .bay{display:flex;flex-direction:column;grid-template-columns:none;
+    overflow-x:visible;padding:8px 10px;gap:2px}
+  .pad{flex-direction:row;align-items:center;gap:12px;padding:7px 0;
+    border-bottom:1px solid var(--line)}
+  .pad:last-child{border-bottom:none}
+  .tube{flex:0 0 auto;width:56px;height:92px}
+  .badge{order:4;flex:0 0 auto;width:auto;height:auto;text-align:right;min-width:56px}
+  .pct{order:3;flex:0 0 auto;width:60px;text-align:right;font-size:13px}
+  .who{order:2;flex:1 1 auto;text-align:left;min-width:0}
+  .who b{font-size:13px}
+  .who span{font-size:10px}
   .tabs{flex-wrap:wrap;gap:0}
   .tab{font-size:17px;padding:8px 11px}
   .demo{font-size:11.5px;padding:8px 11px}
