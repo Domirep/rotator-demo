@@ -256,6 +256,30 @@ ops        200 bps    2%   gas, RPC, hosting
 The ops share is a top-up, not a standing fee: it is drawn only while the gas
 wallet sits below a fixed lamport target, and goes to the crew once met.
 
+**Three of those four lines pay the same address.** The vault holds four
+recipient entries, but crew, dividend and ops all pay the distributor — the
+wallet that pays winners — because the vault permits duplicate recipients and
+that avoids a second operator-controlled key. Only the team share goes
+somewhere else. So what is frozen on chain is:
+
+```
+9500 bps  the distributor        crew + dividend + ops
+ 500 bps  BctPqouo…              team
+```
+
+**Be precise about what that does and does not guarantee.** Frozen means the
+fee stream cannot be pointed at a different address, by us or anyone — see the
+section above. It does **not** mean the chain enforces the 80/13/2 breakdown of
+the distributor's 95%: that split is keeper logic, and keeper logic can change.
+It never was on-chain enforced, not even when ops was going to be a separate
+wallet — nothing in a fee vault can compel whoever holds the crew share to hand
+it to winners.
+
+What makes the crew share checkable is not the vault, it is publication: every
+round's seed, holder set, crew list and payout amount is published, the pad
+formula is reproducible, and every payout is a signature you can look up. If a
+round's payouts do not match its published crew and pot, the record says so.
+
 Source of funds: a 3% trade tax on $GALAXY. Meteora takes 20% of that tax, the
 launch platform 30%, the creator 50%. The creator half funds the table above —
 **1.5% of traded volume.**
