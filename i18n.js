@@ -72,8 +72,6 @@ window.I18N = {
        '<p>The fees land in a Meteora fee-sharing vault. Who it pays is written when the vault is created, and no instruction in the program can change it. We did not write it. Meteora can upgrade it; we do not hold that key.</p><p>The crew share still passes through our payout wallet. What holds us to it is publication: every seed, crew and payout is public, so any round can be recomputed and any transfer looked up. Addresses and the checks: <a href="llms.txt">llms.txt</a>.</p>'],
       ['Why MET?',
        '<p>$GALAXY is paired with MET, so the fees arrive as MET. We never have to sell anything to pay you.</p>'],
-      ['Is this gambling?',
-       '<p>Random assignment, real money on the outcome. Treat it like gambling. Rules differ where you live, and that part is on you.</p>'],
     ],
   },
 
@@ -144,8 +142,6 @@ window.I18N = {
        '<p>手续费进的是 Meteora 的分成金库。收款名单在建库那一刻写死，程序里没有任何指令能改。这程序不是我们写的。Meteora 可以升级它，那把钥匙在他们手里。</p><p>给获胜那组的钱还是要经过我们的发放钱包。约束我们的是公开：每一轮的种子、名单和付款都公开，谁都能自己重算一轮，也能查到那笔转账。地址和核验方法：<a href="llms.txt">llms.txt</a>。</p>'],
       ['为什么用 MET 发奖？',
        '<p>$GALAXY 的交易对是 MET，手续费本来就是 MET 进来的。这样我们不用卖任何东西就能给你发钱。</p>'],
-      ['这算赌博吗？',
-       '<p>随机分配，结果决定钱的去向。请当赌博看待。各地规定不同，这部分要你自己把握。</p>'],
     ],
   },
 
@@ -216,8 +212,6 @@ window.I18N = {
        '<p>Las comisiones llegan a una bóveda de reparto de Meteora. A quién paga queda escrito al crearla y ninguna instrucción del programa puede cambiarlo. No lo escribimos nosotros. Meteora sí puede actualizarlo; esa llave la tienen ellos.</p><p>La parte de la tripulación sigue pasando por nuestra cartera de pagos. Lo que nos ata es la publicación: cada semilla, cada tripulación y cada pago son públicos, así que cualquiera puede recalcular una ronda y buscar la transferencia. Direcciones y comprobaciones: <a href="llms.txt">llms.txt</a>.</p>'],
       ['¿Por qué MET?',
        '<p>$GALAXY está emparejado con MET, así que las comisiones llegan en MET. Nunca tenemos que vender nada para pagarte.</p>'],
-      ['¿Esto es apostar?',
-       '<p>Asignación al azar, dinero real según el resultado. Trátalo como una apuesta. Las reglas cambian según dónde vivas y eso te toca a ti.</p>'],
     ],
   },
 };
