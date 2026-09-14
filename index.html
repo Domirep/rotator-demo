@@ -523,6 +523,10 @@ const API=(new URLSearchParams(location.search).get('api')
   ||localStorage.getItem('rot.api')||DEFAULT_API).replace(/\/$/,'');
 if(API&&API!==DEFAULT_API){ try{ localStorage.setItem('rot.api',API); }catch(e){} }
 let srv=null, srvOk=false, srvPct=null, srvLive=null, raceMs=RACE_MS, srvFails=0;
+// The launch animation is meant to fill the pause between rounds, not run a
+// fixed 4.2s regardless of how long that pause actually is. Defaults to
+// LAUNCH_MS for the offline demo, where there is no server gap to match.
+let launchMs=LAUNCH_MS;
 
 function setFeedBadge(){
   const bar=document.querySelector('.demo'); if(!bar||!API) return;
@@ -610,6 +614,7 @@ function applyServer(j){
   // raceMs is the RACING window, which is shorter than the round: the last
   // gapMs is settled time, held for the launch animation.
   raceMs = j.raceMs || j.roundMs || RACE_MS;
+  launchMs = j.gapMs || LAUNCH_MS;
   tStart = j.startedAt;
 
   if(j.round!==round){
@@ -771,7 +776,7 @@ function puff(p,cx,y,n,hot){
 function drawPad(i,now,dt){
   const p=P[i], g=p.ctx, W=p.w, H=p.h;
   g.clearRect(0,0,W,H);
-  const lt = (i===winner&&launchAt) ? Math.min(1,(Date.now()-launchAt)/LAUNCH_MS) : 0;
+  const lt = (i===winner&&launchAt) ? Math.min(1,(Date.now()-launchAt)/launchMs) : 0;
   const climb = Math.pow(lt,2.2);
   /* hold-down release: the pad shudders for the first beat, then it goes */
   const shake = (lt>0&&lt<0.22&&!REDUCED) ? Math.round(rnd(-1,1))*PX : 0;
@@ -836,7 +841,7 @@ function endLaunch(){ trail=[]; sky.classList.remove('on'); sctx.clearRect(0,0,s
 
 function drawSky(now,dt){
   if(!launchAt||winner<0) return;
-  const lt=Math.min(1,(Date.now()-launchAt)/LAUNCH_MS);
+  const lt=Math.min(1,(Date.now()-launchAt)/launchMs);
   const y=ly-Math.pow(lt,2.2)*(ly+260);
   sctx.clearRect(0,0,skyW,skyH);
   if(!REDUCED&&lt<0.99)
