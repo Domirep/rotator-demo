@@ -64,7 +64,8 @@ header::after{content:"";position:absolute;inset:0;
 
 /* launch bay */
 .bay{border:1px solid var(--line);border-radius:12px;background:var(--felt);
-  padding:18px 16px 14px;display:grid;grid-template-columns:repeat(8,1fr);gap:10px}
+  padding:18px 16px 14px;display:grid;grid-template-columns:repeat(8,minmax(64px,1fr));
+  gap:10px;overflow-x:auto}
 .pad{display:flex;flex-direction:column;gap:8px;min-width:0}
 .tube{position:relative;height:300px}
 .well{position:absolute;inset:0;overflow:hidden;border:1px solid var(--line);border-radius:9px 9px 5px 5px;
@@ -128,11 +129,13 @@ footer a:hover{border-bottom-color:var(--gold)}
 .social a:hover{border-bottom-color:var(--gold)}
 .social span{color:var(--dim)}
 footer{border-top:none;margin-top:10px !important;margin-top:26px;padding:16px 0 40px;color:var(--dim);font-size:12px;line-height:1.7}
-@media(max-width:900px){.cols{grid-template-columns:1fr}.bay{grid-template-columns:repeat(4,1fr);row-gap:18px}.tube{height:230px}}
+@media(max-width:900px){.cols{grid-template-columns:1fr}.tube{height:230px}}
 
 /* Phones. Most players arrive through an in-app browser (FOMO), so this is the
-   common case, not the edge case. All eight pads stay visible at once — it is a
-   race, and hiding half the field behind a scroll breaks the point of it. */
+   common case, not the edge case. All eight pads stay in one line, same as
+   desktop — it is a race, and wrapping it into rows breaks that. Below
+   ~640px eight columns can't fit at a legible width, so the row scrolls
+   horizontally instead of shrinking pads into something unreadable. */
 @media(max-width:560px){
   .wrap{padding:0 14px}
   .hd{padding:14px;gap:10px}
@@ -143,7 +146,7 @@ footer{border-top:none;margin-top:10px !important;margin-top:26px;padding:16px 0
   .racebar{gap:10px;padding:12px 0 8px}
   .racebar h2{font-size:22px}
   .clock{font-size:24px}
-  .bay{padding:12px 10px 10px;gap:6px;row-gap:14px}
+  .bay{padding:12px 10px 10px;gap:6px}
   .tube{height:150px}
   .pct{font-size:11.5px}
   .who b{font-size:11px}
