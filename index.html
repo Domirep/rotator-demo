@@ -980,7 +980,24 @@ function clockStep(){
     settled=true; setTargets(); launchAt=Date.now(); beginLaunch();
     st.textContent='LIFTOFF'; st.className='pill p-go';
     vault=vault-pot+(6+Math.random()*22);
-    if(!srvOk) setTimeout(newRound,7000);
+    if(!srvOk){
+      setTimeout(newRound,7000);
+    } else {
+      /* Round timing is wall-clock deterministic (round_number =
+         floor(unix_ms/roundMs), published in llms.txt) -- the client
+         doesn't need to wait for a poll to know when the next one starts,
+         it can compute the boundary itself. Without this, the countdown
+         only resumed once the next poll happened to land (up to POLL_MS
+         later), so a fresh round visibly started a couple of seconds short
+         of raceMs instead of a clean reset. This predicts the boundary and
+         resumes the count exactly on time; the next real poll still
+         overwrites tStart with the authoritative value moments later, this
+         just removes the visible lag in between. Guarded on `settled` so a
+         poll that already reset the round first doesn't get clobbered by a
+         stale prediction firing late. */
+      const predictedStart = tStart + raceMs + launchMs;
+      setTimeout(()=>{ if(settled) tStart = predictedStart; }, Math.max(0, predictedStart - Date.now()));
+    }
   } else if(left>0){
     const hot=s<=10;
     st.textContent = hot?'TERMINAL COUNT':'FUELING';
