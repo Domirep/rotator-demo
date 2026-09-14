@@ -207,14 +207,23 @@ address, and 9500 bps still goes to it — the fold is keeper arithmetic, not an
 on-chain edit, and nothing about the locked destinations moved.
 
 **When a round rolls instead of paying.** The pot carries into the next round,
-unpaid, in exactly three cases — all published on the round as `rolled` with a
+unpaid, in exactly four cases — all published on the round as `rolled` with a
 `rolledReason`:
 
 ```
 no price data for any coin    the feed was down for the whole round
 pot below 1 MET               too small to be worth the transaction fee
-nobody on the winning pad      no eligible holder was assigned to it
+nobody on the winning pad     no eligible holder was assigned to it
+not enough gas to pay the crew  see below
 ```
+
+The last one is about SOL, not MET. Opening a token account for a winner who
+does not have one costs 1,488,440 lamports, paid by us out of the 2% ops
+share. If the wallet cannot cover every account a round needs, the round rolls
+**before anything is sent** rather than paying half a crew and failing on the
+rest. It is mostly a cold-start condition: trading fees arrive roughly every
+15 minutes, so the ops share has nothing to sell during the first rounds. The
+pot is not lost — it grows, and pays out once the tank refills.
 
 Nothing is kept. A rolled pot is added to the next round's.
 
