@@ -333,7 +333,7 @@ details code{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--p
 
 <div class="wrap">
 
-  <div class="demo">DEMO — live Jupiter prices on real coins. No contracts, no token, nothing signed. Wallets and payouts are simulated.</div>
+  <div class="demo">LIVE — $GALAXY is a real Solana token, rounds and payouts come from the keeper. This line updates once your browser confirms with it.</div>
 
   <nav class="tabs" role="tablist">
     <button class="tab on" data-tab="race" role="tab" aria-selected="true">The Race</button>
@@ -395,7 +395,7 @@ details code{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--p
     <div>
       <div class="panel">
         <h3 data-i18n="fuelPanel">How the fuel fills</h3>
-        <p data-i18n-html="fuel1"><b style="color:var(--paper)">Fuel</b> &mdash; the time-weighted average of the coin's move since the gate. 90 samples a launch. One green candle can't fill a tank.</p>
+        <p data-i18n-html="fuel1"><b style="color:var(--paper)">Fuel</b> &mdash; the time-weighted average of the coin's move since the gate, over every price sample taken this round (published per round, count varies). One green candle can't fill a tank.</p>
         <p data-i18n-html="fuel2"><b style="color:var(--paper)">Dashed line</b> &mdash; the price this second. Above the fuel it's pouring in, below it's draining.</p>
         <p data-i18n-html="fuel3"><b style="color:var(--paper)">T-0</b> &mdash; fullest tank lifts off. Everyone else is scrubbed.</p>
         <p id="feed" class="mono" style="font-size:11.5px;color:var(--dim)">feed: connecting&#8230;</p>
@@ -412,8 +412,8 @@ details code{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--p
 
   <div class="social"><a href="https://x.com/galaxymet" rel="noopener">@galaxymet</a><span>&middot;</span><a href="llms.txt">llms.txt</a><span>&middot;</span><a href="https://github.com/Domirep/rotator-demo" rel="noopener">source</a></div>
   <footer>
-    Demo only. Prices are live from Jupiter for eight real Solana memecoins; the launch, wallets, vault, pots and payouts are simulated.
-    No contracts deployed, no token exists, nothing is signed.
+    $GALAXY is live on Solana. Prices are live from Jupiter for eight real Solana memecoins; the launch, wallets, vault, pots and payouts are real.
+    Every claim here, with addresses and how to check it: <a href="llms.txt">llms.txt</a>.
   </footer>
 </div>
 
@@ -1355,35 +1355,35 @@ setInterval(checkForUpdate,180000);
  "name": "ROTATOR",
  "token": "$GALAXY",
  "chain": "solana",
- "status": "pre-launch-demo",
- "asOf": "2026-09-13",
+ "status": "live",
+ "asOf": "2026-09-14",
  "machineReadable": "/llms.txt",
  "notTrueYet": [
-  "payout destinations are locked",
-  "the operator cannot change where fees go",
-  "the game is trustless"
+  "the game is trustless -- round settlement (slate, snapshot, pad assignment, payout) still runs in a Node script under one keeper key. The fee split is trustless (PDA, no setter); round settlement is not."
  ],
  "trust": {
   "roundOutcomeVerifiable": true,
   "padAssignmentVerifiable": true,
   "splitEnforcedByCode": false,
-  "destinationsImmutable": false,
-  "reason": "fee vault not created yet; once it is, the recipient list is fixed and Meteora holds the program upgrade key"
+  "destinationsImmutable": true,
+  "reason": "the fee vault exists and transfer_pool_creator has run: the recipient list is fixed on chain, no setter exists. The 93/5/2 split of the distributor's own share is keeper policy, not chain-enforced -- check it round by round against published payouts. Meteora (not us) can still upgrade the vault program."
  },
  "addresses": {
-  "galaxyMint": null,
+  "galaxyMint": "9n3AqW2xLVqh5qyMzaztZqKbgN4uudXgGTfbANoWv4bF",
   "payoutToken": "METvsvVRapdj9cFLzq4Tr43xK4tAjQfwX76z3n6mWQL",
+  "feeVault": "4nKyrntTRvPv1LQyBGsWnngywz3DUKpse9dPEofVUV3P",
   "teamWallet": "BctPqouosqBE9LdN2ha6kvMmagHTrscVGoJvWW7XqYfN",
   "meteoraDbc": "dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN",
   "meteoraDammV2": "cpamdpZCGKUy5JxQXB4dcpGPiikHawvSWAd6mEn1sGG",
-  "vaultProgram": null
+  "vaultProgram": "dfsdo2UqvwfN8DuUVrMRNfQe11VaiNoKcMqLHVvDPzh",
+  "namedExclusions": "GET {keeper}/api/exclusions -- not hand-copied here, it can drift"
  },
  "round": {
   "ms": 180000,
   "raceMs": 170000,
   "gapMs": 10000,
   "align": "floor(unix_ms/180000)",
-  "samples": 85,
+  "samplesNote": "target ~2s cadence; actual count varies with RPC load and is published per round as `samples` -- do not assume a fixed number",
   "seed": "sha256(blockhash + \"|\" + round_number)",
   "assignment": "int(sha256(address + \"|\" + seed)[0:12],16) mod 8",
   "winner": "highest mean-price move vs first sample"
@@ -1398,8 +1398,8 @@ setInterval(checkForUpdate,180000);
  "eligibilityTokens": 100000,
  "decimals": 6,
  "feeTax": "3%",
- "creatorShareOfTax": "50%",
- "effectiveOfVolume": "1.5%"
+ "creatorShareOfTax": "80% (measured, not quoted -- see llms.txt)",
+ "effectiveOfVolume": "~2.4% of traded volume reaches the fee vault; ~1.425% of that funds pots specifically (the team's 5% does not)"
 }
 </script>
 </body>

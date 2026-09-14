@@ -108,9 +108,15 @@ day         = floor(unix_ms / 86400000)          UTC days
 daily_seed  = sha256(blockhash + '|' + day)
 ```
 
-`blockhash` is the one from the **first round of that UTC day**, already
-published on that round. So the seed is derived from a value that was visible
-independently of us, and it is unpredictable before the day starts.
+`blockhash` is the one from **the first round the keeper serves that UTC
+day** -- not necessarily the round starting at 00:00:00 UTC. On a day the
+keeper has been running continuously since before midnight, those are the
+same round, and the seed is unpredictable before the day starts. On a day
+the keeper starts or restarts partway through (launch day was one: the
+keeper began serving rounds ~04:22 UTC on 2026-09-14, not 00:00), "first
+round that day" means the first one it actually saw, several hours later
+than midnight -- check `drawnAt` against `00:00:00Z` for that day before
+repeating the unpredictability claim.
 
 The separator is an ASCII pipe, the same as the pad formula. There are no
 non-ASCII characters in anything we hash.
@@ -256,7 +262,14 @@ round_closes = round_start + 180000       the next round opens exactly here
 ```
 
 For each round we publish `blockhash`, `slot`, `seed`, every price sample, the
-full crew list and every payout amount.
+full crew list and every payout amount. The price samples: `GET
+{keeper}/api/round/{n}` returns `field[]`, and each entry carries `t` and `p`
+-- parallel arrays of sample timestamp (unix ms) and price, one pair per poll
+tick, alongside `entry` (the first sample) and `twapPct` (the mean of `p`
+against `entry`, already computed for you). Recompute `mean(p)` yourself
+against `entry` and it must equal `twapPct`. Before this was added, `samples`
+was a bare count and the TWAP was not independently recomputable -- a real
+gap, not a rounding note.
 
 **1. The seed was not chosen by us**
 
@@ -282,9 +295,14 @@ For each of the eight coins:
 
 ```
 entry = first sampled price of the round
-twap  = arithmetic mean of all ~80 samples   (a 170s window at one sample per 2s, minus start-up)
+twap  = arithmetic mean of every price sample taken this round
 move  = (twap - entry) / entry * 100
 ```
+
+Sampling targets one poll per 2s over the 170s race window, but the real
+count varies with RPC/price-feed latency -- do not assume a fixed ~80 or ~90.
+The actual count and every sample used are published per round (see above),
+so check `p.length` and `mean(p)` rather than assume a rate.
 
 Highest `move` wins. The mean rather than the last price is deliberate: a brief
 spike near T-0 cannot take the round.
@@ -470,11 +488,15 @@ floor. A round is never sized on a number we chose after seeing the seed.
   that round. The reverse is also true: selling after the snapshot does not
   remove you from that round, so the winning crew is the crew **as of the
   opening slot**, not as of the payout.
-- **The pool's own token vault is excluded**, and so is any address published
-  in `EXCLUDED_OWNERS`. The liquidity pool holds a large share of supply; left
-  in the set it would be assigned a pad and, as the largest holder in any crew
-  it joined, would take most of the pot straight back into the pool. Excluded
-  addresses are listed below and are checkable on chain.
+- **The pool's own token vault is excluded by shape** (off-curve, like any
+  PDA -- checkable with `PublicKey.isOnCurve()`), not by a maintained list.
+  The liquidity pool holds a large share of supply; left in the set it would
+  be assigned a pad and, as the largest holder in any crew it joined, would
+  take most of the pot straight back into the pool. Named, on-curve
+  exclusions (the team wallet, the distributor, the mint itself) are NOT
+  caught by the off-curve rule and have to be excluded explicitly --
+  published live at `GET {keeper}/api/exclusions`, not hand-copied here
+  where it could drift out of sync with what the code actually excludes.
 - Pads are assigned per wallet, independently. **Nothing spreads wallets across
   pads** — several wallets can land on the same one, and the seed reshuffles
   every round. Eight wallets cover all eight pads about 0.24% of the time, and

@@ -6,23 +6,25 @@ A 3-minute game on Solana. Eight real memecoins race. Every eligible holder of
 $GALAXY is assigned to one. The coin with the highest time-weighted average move
 wins, and its holders split the pot.
 
-> ## Status: PRE-LAUNCH
+> ## Status: LIVE (launched 2026-09-14)
 >
-> **$GALAXY does not exist yet.** There is no mint, no pool, nothing to buy.
-> The page in this repo is a demo: the prices are real and live from Jupiter,
-> but the rounds, wallets, pots and payouts on it are simulated.
+> **$GALAXY exists.** Mint `9n3AqW2xLVqh5qyMzaztZqKbgN4uudXgGTfbANoWv4bF`,
+> 1,000,000,000 supply, mint/freeze authority both revoked, trading live via a
+> Meteora DBC pool. The page in this repo talks to the real keeper: rounds,
+> wallets, pots and payouts are real, paid in MET.
 >
-> **`llms.txt` is written as the launch-day document**, with `__GALAXY_MINT__`
-> and `__FEE_VAULT__` still unfilled. It describes how the game will work once
-> the fee vault exists. `scripts/preflight.js` exists specifically so the site
-> cannot be published while that file claims something the chain does not yet
-> support — it currently fails, by design.
+> **`llms.txt` is filled in and current** — `__GALAXY_MINT__` and
+> `__FEE_VAULT__` were placeholders before launch; both are now real
+> addresses. `scripts/preflight.js` decodes the live fee vault and checks it
+> against the split `llms.txt` publishes; it exits 0 ("Safe to publish") as
+> of this launch, and blocks publishing again the moment the two drift.
 >
 > Fees are held by Meteora's **Dynamic Fee Sharing** program
 > (`dfsdo2UqvwfN8DuUVrMRNfQe11VaiNoKcMqLHVvDPzh`), not by a program of ours.
 > It is open source, already live, and has no instruction that can edit a
-> vault's recipient list. Preflight checks the on-chain shares against the
-> split published in `llms.txt`, so the two cannot drift.
+> vault's recipient list — `transfer_pool_creator` has run, so that list is
+> now permanent. Meteora itself can still upgrade the program; that's
+> disclosed in `llms.txt`, not hidden.
 
 ## What's here
 
