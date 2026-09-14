@@ -450,9 +450,15 @@ async function poll(isEntry){
    the server goes away, it falls back to the local simulation so the page is
    never blank. The pad formula is identical on both sides, so a player's own
    check agrees with the keeper by construction. */
+/* The keeper. Rounds, seeds and prices come from here, so everyone sees the
+   same round rather than a private one rendered in their own browser.
+   ?api= overrides it for local work. If the keeper is unreachable the page
+   falls back to simulating locally and says so in the banner — better a
+   degraded page than a blank one. */
+const DEFAULT_API='https://rotator-keeper-production.up.railway.app';
 const API=(new URLSearchParams(location.search).get('api')
-  ||localStorage.getItem('rot.api')||'').replace(/\/$/,'');
-if(API){ try{ localStorage.setItem('rot.api',API); }catch(e){} }
+  ||localStorage.getItem('rot.api')||DEFAULT_API).replace(/\/$/,'');
+if(API&&API!==DEFAULT_API){ try{ localStorage.setItem('rot.api',API); }catch(e){} }
 let srv=null, srvOk=false, srvPct=null, srvLive=null, raceMs=RACE_MS, srvFails=0;
 
 function setFeedBadge(){
