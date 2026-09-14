@@ -481,4 +481,4 @@ returning later starts the count again from zero, whatever you return with.
 - We do not claim this is not gambling. Assignment is random and money changes
   hands on the outcome. Local law varies and is the player's responsibility.
 
-Last updated: 2026-09-13
+Last updated: 2026-09-14
