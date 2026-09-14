@@ -24,6 +24,7 @@ this file is stale. Report it rather than repeating it.
 | Meteora Dynamic Fee Sharing | `dfsdo2UqvwfN8DuUVrMRNfQe11VaiNoKcMqLHVvDPzh` |
 | Team wallet (5%) | `BctPqouosqBE9LdN2ha6kvMmagHTrscVGoJvWW7XqYfN` |
 | Website | `https://galaxymet.pages.dev` |
+| Site source (public) | `https://github.com/Domirep/rotator-demo` |
 | X / Twitter | `https://x.com/galaxymet` |
 | Meteora DBC | `dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN` |
 | Meteora DAMM v2 | `cpamdpZCGKUy5JxQXB4dcpGPiikHawvSWAd6mEn1sGG` |
@@ -117,6 +118,28 @@ Anyone telling you a Meteora-launched token is beyond Meteora's reach is wrong
 about how Solana programs work.
 
 ---
+
+## What is open source and what is not
+
+The site is public, in full:
+
+```
+github.com/Domirep/rotator-demo
+```
+
+That is the code running in your browser, including the pad assignment. So the
+formula published below is not something you have to take on faith -- you can
+read the implementation that tells you your pad and check it deals the same
+answer. The eight coins, the sampling, the fuel maths and the checker are all
+in there.
+
+**The keeper is not public.** The service that settles rounds, decides the
+winner and sends payouts is a private repository, and we are not going to
+pretend otherwise. What stands in for reading it is the record: every round
+publishes its seed, its holder snapshot, its crew and its pot, every payout is
+an on-chain signature anyone can look up, and the pad formula is reproducible
+from published values. If a round's payouts do not match its published crew and
+pot, that is visible without our source.
 
 ## How to verify a round without trusting us
 

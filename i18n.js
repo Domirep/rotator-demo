@@ -72,6 +72,8 @@ window.I18N = {
        '<p>The fees land in a Meteora fee-sharing vault. Who it pays is written when the vault is created, and no instruction in the program can change it. We did not write it. Meteora can upgrade it; we do not hold that key.</p><p>The crew share still passes through our payout wallet. What holds us to it is publication: every seed, crew and payout is public, so any round can be recomputed and any transfer looked up. Addresses and the checks: <a href="llms.txt">llms.txt</a>.</p>'],
       ['Why MET?',
        '<p>$GALAXY is paired with MET, so the fees arrive as MET. We never have to sell anything to pay you.</p>'],
+      ['Can I see the code?',
+       '<p>The site is open: <a href="https://github.com/Domirep/rotator-demo" rel="noopener">github.com/Domirep/rotator-demo</a>. That includes the pad formula running in your browser, so you can check it against the one we publish.</p><p>The keeper that settles rounds and sends payouts is not public. What holds it honest is the record: every seed, crew and payout is published, and every payout is a signature you can look up.</p>'],
     ],
   },
 
@@ -142,6 +144,8 @@ window.I18N = {
        '<p>手续费进的是 Meteora 的分成金库。收款名单在建库那一刻写死，程序里没有任何指令能改。这程序不是我们写的。Meteora 可以升级它，那把钥匙在他们手里。</p><p>给获胜那组的钱还是要经过我们的发放钱包。约束我们的是公开：每一轮的种子、名单和付款都公开，谁都能自己重算一轮，也能查到那笔转账。地址和核验方法：<a href="llms.txt">llms.txt</a>。</p>'],
       ['为什么用 MET 发奖？',
        '<p>$GALAXY 的交易对是 MET，手续费本来就是 MET 进来的。这样我们不用卖任何东西就能给你发钱。</p>'],
+      ['能看到代码吗？',
+       '<p>网站是开源的：<a href="https://github.com/Domirep/rotator-demo" rel="noopener">github.com/Domirep/rotator-demo</a>。在你浏览器里跑的分配公式就在里面，可以和我们公布的对一遍。</p><p>负责结算和发钱的后台没有公开。约束它的是记录：每一轮的种子、名单和付款都公开，每一笔付款都是能查到的链上签名。</p>'],
     ],
   },
 
@@ -212,6 +216,8 @@ window.I18N = {
        '<p>Las comisiones llegan a una bóveda de reparto de Meteora. A quién paga queda escrito al crearla y ninguna instrucción del programa puede cambiarlo. No lo escribimos nosotros. Meteora sí puede actualizarlo; esa llave la tienen ellos.</p><p>La parte de la tripulación sigue pasando por nuestra cartera de pagos. Lo que nos ata es la publicación: cada semilla, cada tripulación y cada pago son públicos, así que cualquiera puede recalcular una ronda y buscar la transferencia. Direcciones y comprobaciones: <a href="llms.txt">llms.txt</a>.</p>'],
       ['¿Por qué MET?',
        '<p>$GALAXY está emparejado con MET, así que las comisiones llegan en MET. Nunca tenemos que vender nada para pagarte.</p>'],
+      ['¿Puedo ver el código?',
+       '<p>La web es abierta: <a href="https://github.com/Domirep/rotator-demo" rel="noopener">github.com/Domirep/rotator-demo</a>. Ahí está la fórmula de asignación que corre en tu navegador, así que puedes compararla con la que publicamos.</p><p>El programa que liquida las rondas y paga no es público. Lo que lo sujeta es el registro: cada semilla, cada tripulación y cada pago se publican, y cada pago es una firma que puedes buscar.</p>'],
     ],
   },
 };
