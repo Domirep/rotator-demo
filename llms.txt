@@ -389,16 +389,26 @@ round's seed, holder set, crew list and payout amount is published, the pad
 formula is reproducible, and every payout is a signature you can look up. If a
 round's payouts do not match its published crew and pot, the record says so.
 
-Source of funds: a 3% trade tax on $GALAXY. Ember's published split of that
-tax is Meteora 20%, the launch platform 30%, the creator 50% — which would put
-**about 1.5% of traded volume** into the vault.
+Source of funds: a **3% trade tax** on $GALAXY. About **80% of that reaches
+the creator**, which is the fee vault — so roughly **2.4% of traded volume**
+lands in it.
 
-**Treat that 1.5% as an estimate, not a promise.** It is Ember's number, not
-something we measured, and the keeper uses it only to *size* a pot before
-clamping. What actually bounds every pot is the vault's real balance, which is
-on chain and which you can read yourself — see "How a pot is sized". If Ember's
-split were different from what they publish, the pots would still be drawn from
-the same real money; only the estimate inside the clamp would move.
+**That 80% is measured, not quoted.** Ember documents 50%, and their API cannot
+settle it: it reports fees as exactly 1.000% of volume whatever the fee tier is,
+which would imply a 100% creator share on a 1% token. So it was derived from
+money that actually moved — for tokens in `keep` mode, where Ember routes
+nothing to holders or burns, what the creator was actually paid over what was
+actually traded, divided by that token's own fee. Nine independent tokens land
+within one point of **79.9%**. Readings below that are claim lag, which drags a
+reading down and never up, so the cluster is the floor.
+
+Anyone can redo it from Ember's public API; the keeper ships the script that
+does (`scripts/creator-share.js`).
+
+**It is still only an estimate for sizing.** The keeper uses this rate to size a
+pot before clamping it, and what actually bounds every pot is the vault's real
+balance, on chain and readable — see "How a pot is sized". If Ember's terms
+change, pots still come out of the same real money; only the estimate moves.
 
 ## How a pot is sized
 
@@ -407,12 +417,12 @@ three to reproduce a round:
 
 ```
 free = distributor balance - ops reserve
-draw = round volume * 1.425%
+draw = round volume * 2.28%
 pot  = clamp(draw + rollover, 5% of free, 30% of free)
 ```
 
-- **1.425%, not 1.5%.** The team's 500 bps never funds a pot, so the rate that
-  reaches the crew and the ops reserve is 1.5% scaled by 9500/10000.
+- **2.28%, not 2.4%.** The team's 500 bps never funds a pot, so the rate that
+  reaches the crew and the ops reserve is 2.4% scaled by 9500/10000.
 - **The balance is the distributor's, not the fee vault's.** The vault splits
   fees out; the distributor is the wallet holding what the game can pay from.
 - **Money already owed comes off first.** The ops reserve sits in that same
