@@ -266,7 +266,7 @@ For each of the eight coins:
 
 ```
 entry = first sampled price of the round
-twap  = arithmetic mean of all ~85 samples
+twap  = arithmetic mean of all ~80 samples   (a 170s window at one sample per 2s, minus start-up)
 move  = (twap - entry) / entry * 100
 ```
 
