@@ -281,7 +281,7 @@ details code{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--p
     <h2 id="rno">LAUNCH #1041</h2>
     <span class="pill p-live" id="state">FUELING</span>
     <div class="clock" id="clock">T-03:00</div>
-    <div class="seedline" id="seed">seed sha256(blockhash &#8214; round) = &#8230;</div>
+    <div class="seedline" id="seed">seed sha256(blockhash | round) = &#8230;</div>
   </div>
 
   <!-- The checker sits ABOVE the bay on purpose. It is the only thing most
@@ -1119,8 +1119,8 @@ if(location.hash){ const t=location.hash.slice(1); if(PANES.includes(t)) showTab
   "ms": 180000,
   "align": "floor(unix_ms/180000)",
   "samples": 90,
-  "seed": "sha256(blockhash + U+2016 + round_number)",
-  "assignment": "int(sha256(address + U+2016 + seed)[0:12],16) mod 8",
+  "seed": "sha256(blockhash + \"|\" + round_number)",
+  "assignment": "int(sha256(address + \"|\" + seed)[0:12],16) mod 8",
   "winner": "highest mean-price move vs first sample"
  },
  "splitBps": {
