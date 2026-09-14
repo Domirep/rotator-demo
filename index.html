@@ -93,6 +93,36 @@ canvas.stage{position:absolute;inset:0;width:100%;height:100%;image-rendering:pi
 .pad.scrub{opacity:.42}
 .up{color:var(--up)} .down{color:var(--red)} .flat{color:var(--muted)}
 
+/* lanes: the mobile race. Hidden on desktop; see the 560px query below for
+   the swap. Each lane is a fixed-width track so every rocket races on the
+   same scale -- .lane-trail's width and .lane-rocket's left both come
+   straight from shownF in the frame() loop, the same value the desktop
+   tubes use for fuel height. */
+.lanes{display:none;flex-direction:column;gap:8px;border:1px solid var(--line);
+  border-radius:12px;background:var(--felt);padding:14px 12px}
+.lane{display:flex;align-items:center;gap:10px}
+.lane-head{width:64px;flex:0 0 auto;min-width:0;text-align:left}
+.lane-head b{display:block;font-size:12.5px;font-weight:600;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+.lane-head span{display:block;font-family:"JetBrains Mono",monospace;font-size:8.5px;
+  color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lane-track{position:relative;flex:1 1 auto;height:22px;background:var(--well);
+  border:1px solid var(--line);border-radius:11px;overflow:hidden}
+.lane-trail{position:absolute;left:0;top:0;bottom:0;width:5%;opacity:.85;
+  will-change:width;transition:none}
+.lane-rocket{position:absolute;top:50%;width:0;height:0;
+  border-top:6px solid transparent;border-bottom:6px solid transparent;
+  border-left:11px solid var(--paper);transform:translate(-2px,-50%);
+  will-change:left;filter:drop-shadow(0 0 3px rgba(0,0,0,.5))}
+.lane-flame{position:absolute;right:100%;top:50%;transform:translateY(-50%);
+  width:7px;height:4px;background:var(--gold);border-radius:2px;opacity:.85}
+.lane-pct{width:56px;flex:0 0 auto;font-size:12.5px;text-align:right}
+.lane.mine .lane-head b{color:var(--gold)}
+.lane.mine .lane-track{border-color:rgba(240,210,138,.55)}
+.lane.win .lane-track{border-color:var(--ember);box-shadow:0 0 20px rgba(251,199,169,.35)}
+.lane.win .lane-head b,.lane.win .lane-pct{color:var(--ember)}
+.lane.scrub{opacity:.42}
+
 /* panels */
 .cols{display:grid;grid-template-columns:1fr 340px;gap:18px;margin-top:18px}
 .panel{background:var(--felt);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
@@ -133,13 +163,12 @@ footer{border-top:none;margin-top:10px !important;margin-top:26px;padding:16px 0
 
 /* Phones. Most players arrive through an in-app browser (FOMO), so this is the
    common case, not the edge case. Eight columns can't fit a phone at a
-   legible width -- scrolling sideways to see the whole field defeats the
-   point of a race. A leaderboard of stacked rows fits all eight without any
-   scroll, at full legible size, using the exact same tube: it is still a
-   real vertical fuel tank with the same rocket climbing in it, just laid out
-   sideways in the row and shrunk to icon size instead of column size. Reuses
-   every pixel of the existing canvas/fuel/flame code untouched -- only the
-   layout around it changes. */
+   legible width, but a static ranked list loses the actual race -- no
+   motion, nothing to compare side by side as it happens. Lanes keep the race:
+   a phone has height to spare, so eight horizontal lanes stacked vertically
+   let every rocket move left to right along its own track, all eight visible
+   at once, nothing to scroll but the page. See the .lanes rules below for the
+   lane markup -- this block just swaps which one is visible. */
 @media(max-width:560px){
   .wrap{padding:0 14px}
   .hd{padding:14px;gap:10px}
@@ -150,17 +179,8 @@ footer{border-top:none;margin-top:10px !important;margin-top:26px;padding:16px 0
   .racebar{gap:10px;padding:12px 0 8px}
   .racebar h2{font-size:22px}
   .clock{font-size:24px}
-  .bay{display:flex;flex-direction:column;grid-template-columns:none;
-    overflow-x:visible;padding:8px 10px;gap:2px}
-  .pad{flex-direction:row;align-items:center;gap:12px;padding:7px 0;
-    border-bottom:1px solid var(--line)}
-  .pad:last-child{border-bottom:none}
-  .tube{flex:0 0 auto;width:56px;height:92px}
-  .badge{order:4;flex:0 0 auto;width:auto;height:auto;text-align:right;min-width:56px}
-  .pct{order:3;flex:0 0 auto;width:60px;text-align:right;font-size:13px}
-  .who{order:2;flex:1 1 auto;text-align:left;min-width:0}
-  .who b{font-size:13px}
-  .who span{font-size:10px}
+  .bay{display:none}
+  .lanes{display:flex}
   .tabs{flex-wrap:wrap;gap:0}
   .tab{font-size:17px;padding:8px 11px}
   .demo{font-size:11.5px;padding:8px 11px}
@@ -328,6 +348,7 @@ details code{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--p
   </div>
 
   <div class="bay" id="bay"></div>
+  <div class="lanes" id="lanes"></div>
   <canvas id="sky"></canvas>
 
   <div class="panel roster" id="rosterPanel">
@@ -473,7 +494,7 @@ async function newRound(){
   pot=Math.max(8,Math.round(vault*0.08));
   document.getElementById('pot').textContent='$'+pot;
   document.getElementById('vault').textContent='$'+Math.round(vault);
-  P.forEach(p=>{p.pad.classList.remove('win','scrub','hot'); p.badge.textContent=''; p.smoke.length=0;});
+  P.forEach(p=>{p.pad.classList.remove('win','scrub','hot'); if(p.lane) p.lane.classList.remove('win','scrub'); p.badge.textContent=''; p.smoke.length=0;});
   endLaunch();
   shownF=FIELD.map(()=>0); shownL=FIELD.map(()=>0); shownP=FIELD.map(()=>0);
   await poll(true);
@@ -551,7 +572,7 @@ function setFeedBadge(){
 
 function resetRoundVisuals(){
   settled=false; launchAt=0; winner=-1;
-  P.forEach(p=>{p.pad.classList.remove('win','scrub','hot'); p.badge.textContent=''; p.smoke.length=0;});
+  P.forEach(p=>{p.pad.classList.remove('win','scrub','hot'); if(p.lane) p.lane.classList.remove('win','scrub'); p.badge.textContent=''; p.smoke.length=0;});
   endLaunch();
   shownF=FIELD.map(()=>0); shownL=FIELD.map(()=>0); shownP=FIELD.map(()=>0);
 }
@@ -605,7 +626,7 @@ function adoptField(list){
   const cols=colourField(list);
   list.forEach((f,i)=>FIELD.push({sym:f.sym, name:f.name||f.sym, mint:f.mint, c:cols[i]}));
   SPR.length=0; buildSprites();
-  P.length=0; buildBay();
+  P.length=0; buildBay(); buildLanes();
   shownF=FIELD.map(()=>0); targetF=FIELD.map(()=>0);
   shownL=FIELD.map(()=>0); targetL=FIELD.map(()=>0);
   shownP=FIELD.map(()=>0); targetP=FIELD.map(()=>0);
@@ -715,6 +736,37 @@ function buildBay(){
   if(RO) P.forEach(p=>RO.observe(p.cv));
   measure();
 }
+
+/* ---------- lanes (mobile) ----------
+   Same race, different shape: a phone can't fit eight columns side by side at
+   a legible width, but it has plenty of HEIGHT, so eight horizontal lanes
+   stacked vertically read as a real race -- each rocket moves left to right
+   along its own lane, all eight visible with nothing to scroll but the page.
+   Reads shownF/shownP -- the exact same eased values the desktop tubes use,
+   written in the same frame() loop -- so the motion is identically smooth;
+   this is a second view of the same state, not a second animation system. */
+function buildLanes(){
+  const lanes=document.getElementById('lanes');
+  lanes.innerHTML='';
+  FIELD.forEach((f,i)=>{
+    const el=document.createElement('div');
+    el.className='lane';
+    el.innerHTML=
+      '<div class="lane-head"><b>'+f.sym+'</b><span>'+f.name+'</span></div>'+
+      '<div class="lane-track">'+
+        '<div class="lane-trail" style="background:linear-gradient(90deg,'+f.c+'11,'+f.c+')"></div>'+
+        '<div class="lane-rocket" style="border-left-color:'+f.c+'">'+
+          '<i class="lane-flame"></i>'+
+        '</div>'+
+      '</div>'+
+      '<div class="pct flat lane-pct">+0.00%</div>';
+    lanes.appendChild(el);
+    P[i].lane=el;
+    P[i].laneTrail=el.querySelector('.lane-trail');
+    P[i].laneRocket=el.querySelector('.lane-rocket');
+    P[i].lanePct=el.querySelector('.lane-pct');
+  });
+}
 function measure(){
   const dpr=Math.min(2,window.devicePixelRatio||1);
   P.forEach(p=>{
@@ -755,6 +807,11 @@ function setTargets(){
     P[i].pad.classList.toggle('scrub', settled&&i!==winner);
     P[i].pad.classList.toggle('mine', myPad===i);
     P[i].badge.textContent = settled ? (i===winner?'LIFTOFF':'SCRUBBED') : (myPad===i?'YOUR PAD':'');
+    if(P[i].lane){
+      P[i].lane.classList.toggle('win', settled&&i===winner);
+      P[i].lane.classList.toggle('scrub', settled&&i!==winner);
+      P[i].lane.classList.toggle('mine', myPad===i);
+    }
   });
 }
 
@@ -895,6 +952,15 @@ function frame(){
     P[i].pct.textContent=(v>=0?'+':'')+v.toFixed(2)+'%';
     P[i].pct.className='pct '+(v>0.0005?'up':v<-0.0005?'down':'flat');
     drawPad(i,now,dt);
+    // Lanes: same shownF driving the fuel tanks, read as how far along the
+    // track this rocket is instead of how full its tank is.
+    if(P[i].laneTrail){
+      const pos=(shownF[i]*100).toFixed(1);
+      P[i].laneTrail.style.width=pos+'%';
+      P[i].laneRocket.style.left=pos+'%';
+      P[i].lanePct.textContent=(v>=0?'+':'')+v.toFixed(2)+'%';
+      P[i].lanePct.className='pct lane-pct '+(v>0.0005?'up':v<-0.0005?'down':'flat');
+    }
   }
   drawSky(now,dt);
   requestAnimationFrame(frame);
@@ -1203,7 +1269,7 @@ checkForUpdate();
 setInterval(checkForUpdate,180000);
 
 /* ---------- go ---------- */
-(async()=>{ applyLang(); buildSprites(); buildBay(); requestAnimationFrame(frame);
+(async()=>{ applyLang(); buildSprites(); buildBay(); buildLanes(); requestAnimationFrame(frame);
   setFeedBadge();
   const connected = await pollServer();
   if(!connected) await newRound();
