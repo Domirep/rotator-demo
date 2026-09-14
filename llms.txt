@@ -284,6 +284,36 @@ Source of funds: a 3% trade tax on $GALAXY. Meteora takes 20% of that tax, the
 launch platform 30%, the creator 50%. The creator half funds the table above —
 **1.5% of traded volume.**
 
+## How a pot is sized
+
+A round's pot is not simply that 1.5%. Three adjustments, and you need all
+three to reproduce a round:
+
+```
+free = distributor balance - ops reserve - dividend credited but not yet paid
+draw = round volume * 1.425%
+pot  = clamp(draw + rollover, 5% of free, 30% of free)
+```
+
+- **1.425%, not 1.5%.** The team's 500 bps never funds a pot, so the rate that
+  reaches crew and dividend is 1.5% scaled by 9500/10000.
+- **The balance is the distributor's, not the fee vault's.** The vault splits
+  fees out; the distributor is the wallet holding what the game can pay from.
+- **Money already owed comes off first.** The ops reserve and any dividend
+  credited but not yet swept sit in that same wallet. Sizing a pot against them
+  would pay prizes out of the gas budget or out of what holders are already
+  owed.
+- **The rollover is added before the clamp.** A round too small to be worth its
+  network fee rolls forward, and that carried amount is part of the next draw.
+- **Why clamp at all.** Fees arrive in batches, not continuously. A flat
+  percentage would make the first round after a batch worth several times the
+  last one, for a reason invisible to whoever is playing it. The floor keeps
+  thin rounds worth entering; the ceiling stops one round draining what later
+  rounds need.
+
+With no price or volume data for a round, the draw is zero and the pot is the
+floor. A round is never sized on a number we chose after seeing the seed.
+
 ---
 
 ## Eligibility
