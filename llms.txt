@@ -23,11 +23,27 @@ this file is stale. Report it rather than repeating it.
 | Fee vault | `4nKyrntTRvPv1LQyBGsWnngywz3DUKpse9dPEofVUV3P` |
 | Meteora Dynamic Fee Sharing | `dfsdo2UqvwfN8DuUVrMRNfQe11VaiNoKcMqLHVvDPzh` |
 | Team wallet (5%) | `BctPqouosqBE9LdN2ha6kvMmagHTrscVGoJvWW7XqYfN` |
+| **Distributor (DIST)** -- claims fees, pays winners | `8cdwY2GnTK7CH3oYbxDDDRgXJAtcH7jYhrgeiknTem2t` |
+| **DIST's MET token account** -- the actual payout balance | `3MVNVyXu4eL183HYcuvd9WfcJ21xy6cwaLFUs4GMunBM` |
+| **DBC pool** (the $GALAXY/MET market) | `rsSz5zq1Mp3jb4fA2QHpjTvJFWnY9r8XxP2RnJdNvs1` |
+| **Pool vault** -- holds ~99% of $GALAXY supply, off-curve, excluded from every round by shape | `FhVo3mqL8PW5pH5U2CN4XE33DokiyZnUwuGpH2hmHLuM` |
+| Keeper (read-only API, this is `{keeper}` everywhere below) | `https://rotator-keeper-production.up.railway.app` |
+| Ember markets API (source for creator-share.js and the daily slate) | `https://embercurve.fun/api/solana/markets` |
+| Solana RPC used in every example below | `https://api.mainnet-beta.solana.com` |
 | Website | `https://galaxymet.pages.dev` |
 | Site source (public) | `https://github.com/Domirep/rotator-demo` |
 | X / Twitter | `https://x.com/galaxymet` |
 | Meteora DBC | `dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN` |
 | Meteora DAMM v2 | `cpamdpZCGKUy5JxQXB4dcpGPiikHawvSWAd6mEn1sGG` |
+
+**Why DIST is listed, not hidden.** The hot payout wallet is already fully
+public: every payout signature this file cites (search "PAID_TX" below) names
+it as the sender, so anyone who checks a payout already has this address in
+two clicks. Omitting it from this table wouldn't protect anything -- it would
+just make the FAQ's "addresses are in llms.txt" claim false for the one
+address a reader most needs to check the game's central risk: DIST is a
+normal keypair, not a program the chain restrains, and nothing here stops
+it from being drained. Publication is the only check that exists.
 
 ## The eight competing coins are drawn every 24 hours
 
@@ -100,6 +116,24 @@ apart, mint order does not.
 
 If fewer than 10 qualify, the volatility floor drops in steps of 0.25% until 10
 do. Mechanical, so a thin day is not a judgement call made on the day.
+
+**"Top 30 of N eligible" was published as a conclusion, with no inputs to
+check it against.** `/api/slate` gave you `eligibleCount` (a bare number) and
+`pool` (the 30 that made it), never the other N-30 or the scores used to
+rank them -- re-running the two Jupiter endpoints yourself doesn't recover
+that; the union drifts by the time you fetch it, so a live re-run and the
+historical draw legitimately disagree. Fixed **starting the next daily
+draw after this shipped**: `/api/slate` now also returns `eligible[]` --
+every token that passed every structural filter and the volatility floor,
+each with `liquidity`, `vol24` (Jupiter's `stats24h.buyVolume +
+stats24h.sellVolume`, named explicitly since "24h volume" alone is
+ambiguous), `turnover`, `vol` (the volatility score used to rank), `usdPrice`
+and `verified` -- plus `filters`, the exact threshold numbers used that
+draw. To check a day: filter `eligible` against `filters`, sort by `vol`
+desc then `mint` asc, take 30, sort by `mint`, compare to `pool`. A slate
+drawn before this shipped has `eligibleCount` only, same class of gap as
+crews before round 9941155 and samples before round 9941125 -- named, not
+silently backfilled.
 
 ### 2. The daily seed
 
@@ -267,14 +301,32 @@ returned whichever round was still live -- a verifier following `?round=N`
 into the past silently got today's roster back, not N's. That was a real
 gap, not a rounding note: the game's first real payout (round 9941118) could
 be checked for a *signature* and a *count*, but not for *who* should have
-received it. Fixed: `GET {keeper}/api/round/crews?round=N` now returns N's
+received it. Fixed: `GET https://rotator-keeper-production.up.railway.app/api/round/crews?round=N` now returns N's
 own persisted crew or a 404 naming the gap, never a substitute; `GET
-{keeper}/api/round/{n}` embeds the same crew as `pads[]` directly in the
+https://rotator-keeper-production.up.railway.app/api/round/{n}` embeds the same crew as `pads[]` directly in the
 round record. Rounds before 9941155 -- including 9941118 -- were never
 persisted and cannot be reconstructed after the fact; both endpoints say so
 rather than backfill a guess from a later snapshot.
 
 ## How to verify a round without trusting us
+
+**Copy-paste checks -- real URLs, nothing to fill in:**
+
+```
+GET https://rotator-keeper-production.up.railway.app/api/round/current
+GET https://rotator-keeper-production.up.railway.app/api/round/{n}                (a settled round number; 404 if it's still in-flight or never existed)
+GET https://rotator-keeper-production.up.railway.app/api/round/crews?round={n}    (that round's own crew, or a 404 naming why not -- see below)
+GET https://rotator-keeper-production.up.railway.app/api/slate
+GET https://rotator-keeper-production.up.railway.app/api/exclusions
+GET https://rotator-keeper-production.up.railway.app/api/leaderboard
+GET https://rotator-keeper-production.up.railway.app/api/rounds                   (recent round numbers)
+GET https://embercurve.fun/api/solana/markets                                     (find the row where mint == 9n3AqW2xLVqh5qyMzaztZqKbgN4uudXgGTfbANoWv4bF; paidUsd is the number that matters)
+```
+
+`{n}` is the only placeholder left in this file -- a round number you choose.
+Everywhere else, `{keeper}` used to appear as unresolved template text; it's
+now the literal URL above every time, so a reader doesn't have to guess what
+it resolves to.
 
 Rounds are aligned to the wall clock:
 
@@ -289,7 +341,7 @@ For each round we publish `blockhash`, `slot`, `seed`, every price sample, the
 full crew list and every payout amount -- the crew list since round 9941155,
 the price samples since round 9941125 (see "its crew" and the samples note
 below for both exceptions). The price samples: `GET
-{keeper}/api/round/{n}` returns `field[]`, and each entry carries `t` and `p`
+https://rotator-keeper-production.up.railway.app/api/round/{n}` returns `field[]`, and each entry carries `t` and `p`
 -- parallel arrays of sample timestamp (unix ms) and price, one pair per poll
 tick, alongside `entry` (the first sample) and `twapPct` (the mean of `p`
 against `entry`, already computed for you). Recompute `mean(p)` yourself
@@ -596,7 +648,7 @@ floor. A round is never sized on a number we chose after seeing the seed.
   take most of the pot straight back into the pool. Named, on-curve
   exclusions (the team wallet, the distributor, the mint itself) are NOT
   caught by the off-curve rule and have to be excluded explicitly --
-  published live at `GET {keeper}/api/exclusions`, not hand-copied here
+  published live at `GET https://rotator-keeper-production.up.railway.app/api/exclusions`, not hand-copied here
   where it could drift out of sync with what the code actually excludes.
 - Pads are assigned per wallet, independently. **Nothing spreads wallets across
   pads** — several wallets can land on the same one, and the seed reshuffles
