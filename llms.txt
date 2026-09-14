@@ -161,6 +161,22 @@ move  = (twap - entry) / entry * 100
 Highest `move` wins. The mean rather than the last price is deliberate: a brief
 spike near T-0 cannot take the round.
 
+**If two or more coins finish exactly level**, the tie is broken by the same
+seed that assigns pads — not by list order:
+
+```
+tiebreak_index = int(sha256("tiebreak|" + seed)[0:12], 16) mod (number tied)
+```
+
+applied to the tied coins in field order. Rounds where this happened publish
+`tiebreak` with the coins involved, so it is never something you take on trust.
+Picking the first-listed coin instead would hand a standing advantage to
+whichever coin sits at the top of the field.
+
+**A round with no price data for any of the eight does not pay.** It rolls (see
+below). With no prices there is no result, and paying a crew chosen by nothing
+is worse than paying nobody. Those rounds publish `priced: 0`.
+
 **4. The payout split**
 
 ```
@@ -168,8 +184,20 @@ weight_i = balance_i * multiplier_i
 payout_i = pot * weight_i / sum(weights)
 ```
 
-Integer arithmetic, rounding down, remainder to the largest holder. The sum of
+Integer arithmetic, rounding down, remainder to the largest weight. The sum of
 payouts equals the pot exactly.
+
+**When a round rolls instead of paying.** The pot carries into the next round,
+unpaid, in exactly three cases — all published on the round as `rolled` with a
+`rolledReason`:
+
+```
+no price data for any coin    the feed was down for the whole round
+pot below 1 MET               too small to be worth the transaction fee
+nobody on the winning pad      no eligible holder was assigned to it
+```
+
+Nothing is kept. A rolled pot is added to the next round's.
 
 Multiplier ladder, by cumulative wins since the wallet last reduced its balance:
 
@@ -207,11 +235,29 @@ launch platform 30%, the creator 50%. The creator half funds the table above —
 ## Eligibility
 
 - Minimum holding: **100,000 $GALAXY** (0.01% of the 1,000,000,000 supply).
+  One wallet's token accounts are summed, so splitting across accounts you
+  control neither helps nor hurts.
 - The holder snapshot is taken at the round's opening slot, the same slot the
   seed derives from. Buying after the seed is public does not enter you into
-  that round.
+  that round. The reverse is also true: selling after the snapshot does not
+  remove you from that round, so the winning crew is the crew **as of the
+  opening slot**, not as of the payout.
+- **The pool's own token vault is excluded**, and so is any address published
+  in `EXCLUDED_OWNERS`. The liquidity pool holds a large share of supply; left
+  in the set it would be assigned a pad and, as the largest holder in any crew
+  it joined, would take most of the pot straight back into the pool. Excluded
+  addresses are listed below and are checkable on chain.
+- Pads are assigned per wallet, independently. **Nothing spreads wallets across
+  pads** — several wallets can land on the same one, and the seed reshuffles
+  every round. Eight wallets cover all eight pads about 0.24% of the time, and
+  the share of a split holding riding the winner stays around 1/8 however it is
+  divided, so splitting changes how often you win, not how much.
 - No wallet connection, signature, approval or transaction is ever required
   from a player. Payouts are pushed.
+
+**Your multiplier resets whenever your balance falls** — including falling
+below the minimum or selling out entirely. Leaving the eligible set and
+returning later starts the count again from zero, whatever you return with.
 
 ---
 

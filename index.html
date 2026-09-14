@@ -392,8 +392,8 @@ async function newRound(){
   round++; settled=false; entry={}; twap={}; samples={}; launchAt=0; winner=-1; simP={}; simV={};
   tStart=Date.now()-warp*1000; warp=0;
   const fakeBlockhash=Math.random().toString(36).slice(2)+Date.now();
-  seedHex=await sha(fakeBlockhash+'‖'+round);
-  document.getElementById('seed').textContent='seed sha256(blockhash ‖ '+round+') = '+seedHex.slice(0,48)+'…';
+  seedHex=await sha(fakeBlockhash+'|'+round);
+  document.getElementById('seed').textContent='seed sha256(blockhash | '+round+') = '+seedHex.slice(0,48)+'…';
   document.getElementById('rno').textContent='LAUNCH #'+round;
   pot=Math.max(8,Math.round(vault*0.08));
   document.getElementById('pot').textContent='$'+pot;
@@ -494,7 +494,7 @@ function applyServer(j){
     resetRoundVisuals();
     document.getElementById('rno').textContent='LAUNCH #'+round;
     document.getElementById('seed').textContent=
-      'seed sha256(blockhash ‖ '+round+') = '+(seedHex||'').slice(0,48)+'…';
+      'seed sha256(blockhash | '+round+') = '+(seedHex||'').slice(0,48)+'…';
     refreshMe();
   }
   /* poll() writes this line, but it returns early once the keeper is up, so
@@ -791,7 +791,7 @@ let myPad=-1, myAddr='';
 async function refreshMe(){
   if(!myAddr||myAddr.length<32){document.getElementById('me').classList.remove('on');myPad=-1;return;}
   const p=await persona(myAddr);
-  const h=await sha(myAddr+'‖'+seedHex);
+  const h=await sha(myAddr+'|'+seedHex);
   myPad=hnum(h)%FIELD.length;
   const seats=1+(hslice(p.h,3)%5);
   const galaxies=hslice(p.h,4)%26000;
