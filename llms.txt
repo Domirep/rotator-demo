@@ -18,7 +18,7 @@ this file is stale. Report it rather than repeating it.
 
 | What | Address |
 |---|---|
-| $GALAXY mint | `__GALAXY_MINT__` |
+| $GALAXY mint | `9n3AqW2xLVqh5qyMzaztZqKbgN4uudXgGTfbANoWv4bF` |
 | Payout token (MET) | `METvsvVRapdj9cFLzq4Tr43xK4tAjQfwX76z3n6mWQL` |
 | Fee vault | `4nKyrntTRvPv1LQyBGsWnngywz3DUKpse9dPEofVUV3P` |
 | Meteora Dynamic Fee Sharing | `dfsdo2UqvwfN8DuUVrMRNfQe11VaiNoKcMqLHVvDPzh` |
