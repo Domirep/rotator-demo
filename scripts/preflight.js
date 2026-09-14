@@ -94,9 +94,15 @@ for (const m of text.matchAll(/^(crew|dividend|team|ops)\s+(\d+)\s+bps/gim)) {
   published.set(m[1].toLowerCase(), Number(m[2]));
 }
 const publishedTotal = [...published.values()].reduce((a, b) => a + b, 0);
+/* crew, team and ops must always be published. dividend is optional: it was
+ * folded into the crew in 2026-09 and its row removed, and the gate must not
+ * hardcode the shape of a split that is expected to be tuned. What is NOT
+ * optional is that the rows sum to 10000 and match the chain. */
+const REQUIRED_ROWS = ['crew', 'team', 'ops'];
 if (claimsLocked) {
-  if (published.size !== 4) {
-    fail.push(`could not read all four share rows from llms.txt (found ${published.size})`);
+  const missing = REQUIRED_ROWS.filter((k) => !published.has(k));
+  if (missing.length) {
+    fail.push(`llms.txt is missing share row(s): ${missing.join(', ')}`);
   } else if (publishedTotal !== 10_000) {
     fail.push(`the published split sums to ${publishedTotal} bps, not 10000`);
   } else {
@@ -167,7 +173,9 @@ if (claimsLocked && !placeholders.length) {
             ok.push(`team wallet is an on-chain recipient at ${teamEntry.bps} bps, exactly as published`);
           }
 
-          const want = [...published.values()].sort((a, b2) => a - b2).join(',');
+          /* A 0-bps row is never written to the vault (launch-vault.js drops
+           * them), so a published zero must not be compared against the chain. */
+          const want = [...published.values()].filter((v) => v > 0).sort((a, b2) => a - b2).join(',');
           const got = asBps.map(u => u.bps).sort((a, b2) => a - b2).join(',');
           if (want !== got) {
             fail.push(`vault shares are [${got}] bps; llms.txt publishes [${want}] bps`);
