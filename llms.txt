@@ -187,6 +187,36 @@ payout_i = pot * weight_i / sum(weights)
 Integer arithmetic, rounding down, remainder to the largest weight. The sum of
 payouts equals the pot exactly.
 
+**The dividend is a separate payout, and it reaches losing rounds.** 13% of
+every draw is credited to **every eligible holder**, not just the winning crew:
+
+```
+dividend_i = dividend * balance_i / sum(balances)
+```
+
+**Pro-rata by balance only — the galaxy multiplier does not apply here.** It
+already weights the pot; applying it to both would compound the same curve
+twice.
+
+It is credited every round and **paid on a sweep**, not per round. Pushing to
+every holder 480 times a day would spend more on fees than it pays out. A
+wallet is paid once it is owed at least **1 MET**, and a sweep runs when:
+
+```
+>= 50 wallets have cleared that floor      or
+60 minutes have passed since the last one  (with at least one wallet ready)
+but never less than 6 minutes apart
+```
+
+The hourly rule is the guarantee, not the schedule: a busy period sweeps on the
+wallet threshold long before the hour is up. A wallet below the floor is not
+dropped — it keeps accruing until it clears. The amount owed but not yet swept
+is published live at `/api/health` as `dividendPending`.
+
+The 1 MET floor exists because we pay the token-account rent for a first-time
+recipient (1,488,440 lamports). A dividend has to be worth more than the
+account it needs.
+
 **When a round rolls instead of paying.** The pot carries into the next round,
 unpaid, in exactly three cases — all published on the round as `rolled` with a
 `rolledReason`:
