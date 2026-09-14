@@ -235,6 +235,8 @@ Rounds are aligned to the wall clock:
 ```
 round_number = floor(unix_ms / 180000)
 round_start  = round_number * 180000
+race_ends    = round_start + 170000       sampling stops here, the winner is fixed
+round_closes = round_start + 180000       the next round opens exactly here
 ```
 
 For each round we publish `blockhash`, `slot`, `seed`, every price sample, the
@@ -264,7 +266,7 @@ For each of the eight coins:
 
 ```
 entry = first sampled price of the round
-twap  = arithmetic mean of all ~90 samples
+twap  = arithmetic mean of all ~85 samples
 move  = (twap - entry) / entry * 100
 ```
 
@@ -426,8 +428,12 @@ floor. A round is never sized on a number we chose after seeing the seed.
 - Minimum holding: **100,000 $GALAXY** (0.01% of the 1,000,000,000 supply).
   One wallet's token accounts are summed, so splitting across accounts you
   control neither helps nor hurts.
-- The holder snapshot is taken at the round's opening slot, the same slot the
-  seed derives from. Buying after the seed is public does not enter you into
+- The holder snapshot is taken when the round opens, and it is **pinned to be
+  no older than the seed's slot** (`minContextSlot`). The slot it was actually
+  served at is published on the round as `snapshotSlot`, so you can check it
+  rather than take our word for the timing. It is not claimed to be byte-for-
+  byte the seed's slot -- an RPC serves the slot it is on, and we publish which
+  one that was. Buying after the seed is public does not enter you into
   that round. The reverse is also true: selling after the snapshot does not
   remove you from that round, so the winning crew is the crew **as of the
   opening slot**, not as of the payout.
