@@ -246,8 +246,17 @@ wallet that deployed it. Check the field yourself rather than take the tx
 succeeding as proof of the current state; a later transaction could in
 principle have moved it again (nothing in the whitelist allows that, but
 "a transaction ran once" and "the field is what it should be right now"
-are different claims, and this backs both). The only instruction that makes
-that PDA sign anything is
+are different claims, and this backs both).
+
+**Ember's own page will show you a different address for this.** Their UI
+labels `BctPqouosqBE9LdN2ha6kvMmagHTrscVGoJvWW7XqYfN` (the wallet that
+submitted the token listing) as "Creator" — that is their off-chain listing
+metadata, not the pool's on-chain `creator` field. `transfer_pool_creator`
+reassigned that field to the vault before Ember's page was ever checked
+against it, and their site does not appear to track the change. Read the
+field yourself with the SDK call above rather than trust either page's label.
+
+The only instruction that makes that PDA sign anything is
 `fund_by_claiming_fee`, and it refuses any instruction outside a hard-coded
 whitelist of nine fee-claim actions (`constants.rs`, `WHITELISTED_ACTIONS`).
 It compares both the target program and the 8-byte discriminator, and checks
