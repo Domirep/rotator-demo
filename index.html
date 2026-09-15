@@ -749,11 +749,14 @@ function applyServer(j){
   // Both are null until the first round has settled -- shown as em-dash
   // rather than inventing a number.
   if(j.vaultUsd!=null) document.getElementById('vault').textContent='$'+Math.round(j.vaultUsd);
-  // A real payout is never exactly $0 (MIN_POT_RAW gates it above ~$0.20), so
-  // lastPotUsd===0 unambiguously means the last round rolled over rather than
-  // paid nothing -- say so instead of showing a bare "$0" that reads as broken.
+  // lastRolled is the keeper's own record of what actually happened, not an
+  // inference from the dollar amount -- the theoretical crew cut on a rolled
+  // round is usually a small real number (e.g. $0.19), not exactly $0, so
+  // "lastPotUsd===0 means rolled" rounded that down to a bare "$0" that read
+  // as broken on nearly every round. Show the real figure only when a payout
+  // actually happened.
   if(j.lastPotUsd!=null){
-    document.getElementById('pot').textContent = j.lastPotUsd>0 ? '$'+Math.round(j.lastPotUsd) : T().roundsRolled;
+    document.getElementById('pot').textContent = j.lastRolled ? T().roundsRolled : '$'+Math.round(j.lastPotUsd);
   }
 
   if(j.settled && !settled){
