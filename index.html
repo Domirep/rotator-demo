@@ -811,6 +811,7 @@ async function pollFees(){
     txt += j.marketFeesUsd!=null ? 'generated $'+j.marketFeesUsd.toFixed(2) : 'generated —';
     txt += ' · claimable '+(claimable!=null ? claimable.toFixed(2)+' MET' : '—');
     txt += ' · paid $'+(j.marketPaidUsd!=null ? j.marketPaidUsd.toFixed(2) : '—');
+    if(j.pendingUsd!=null) txt += ' · pending $'+j.pendingUsd.toFixed(2);
     txt += ' — waiting on Ember to deliver fees to our vault';
     txt += ' · last received: '+(j.lastFeeClaimAt ? agoText(j.lastFeeClaimAt) : 'never yet');
     el.textContent=txt;
