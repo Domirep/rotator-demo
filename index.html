@@ -789,6 +789,13 @@ async function pollServer(){
   }
 }
 
+function agoText(ms){
+  const s=Math.max(0,Math.round((Date.now()-ms)/1000));
+  if(s<60) return s+'s ago';
+  if(s<3600) return Math.round(s/60)+'m ago';
+  return Math.round(s/3600)+'h ago';
+}
+
 /** Shows where a real trade's fee currently sits, so a flat pot doesn't read
  *  as broken: it's either not funded yet by Ember's own cron, or it's sitting
  *  claimable and waiting for the next round's payout math to use it. Polled
@@ -804,6 +811,8 @@ async function pollFees(){
     txt += j.marketFeesUsd!=null ? 'generated $'+j.marketFeesUsd.toFixed(2) : 'generated —';
     txt += ' · claimable '+(claimable!=null ? claimable.toFixed(2)+' MET' : '—');
     txt += ' · paid $'+(j.marketPaidUsd!=null ? j.marketPaidUsd.toFixed(2) : '—');
+    txt += ' — waiting on Ember to deliver fees to our vault';
+    txt += ' · last received: '+(j.lastFeeClaimAt ? agoText(j.lastFeeClaimAt) : 'never yet');
     el.textContent=txt;
     el.style.display='';
   }catch(e){ /* best-effort widget, silent on failure */ }
